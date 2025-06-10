@@ -1,8 +1,7 @@
-#################################################################
-######### Universal Walkthrough System v1.0 Beta ################
-#########                                        ################
-#########    Copyright © Knox Emberlyn 2025.     ################
-#################################################################
+############################################################
+######### Universal Walkthrough System v1.1 ################
+#########      (C) Knox Emberlyn 2025       ################
+############################################################
 ##
 ## INSTALLATION:
 ##   1. Download this __urw.rpy file
@@ -18,7 +17,7 @@
 ## TROUBLESHOOTING:
 ##   If the walkthrough doesn't work with your game:
 ##   1. Open this file in a text editor
-##   2. Change line 41: debug = False  ->  debug = True  
+##   2. Change line 40: debug = False  ->  debug = True  
 ##   3. Run the game and try some menu choices
 ##   4. Press Shift+O to open console and check for error messages
 ##   5. Submit bug reports with debug output to: 
@@ -38,13 +37,25 @@
 #################################################################
 
 init -999 python in dukeconfig:
-    debug = False  # Set to True to enable debug messages
+    debug = False
 
 init -998 python:
     import collections.abc
     import builtins
     import re
     import weakref
+
+
+    def urwmsg(*args, **kwargs):
+        if dukeconfig.debug:
+            print(*args, **kwargs)
+    urwmsg("=== AVAILABLE RENPY AST CLASSES ===")
+    ast_classes = [attr for attr in dir(renpy.ast) if not attr.startswith('_')]
+    audio_visual_classes = [cls for cls in ast_classes if any(keyword in cls.lower() for keyword in ['play', 'stop', 'music', 'sound', 'audio', 'queue'])]
+    urwmsg("Audio/Visual AST classes:", audio_visual_classes)
+    
+    all_statement_classes = [cls for cls in ast_classes if cls[0].isupper()]
+    urwmsg("All statement classes:", all_statement_classes)
 
     # Ren'Py control exceptions that should NOT be caught
     RENPY_CONTROL_EXCEPTIONS = (
@@ -117,16 +128,15 @@ init -998 python:
         """Extract detailed consequences from a choice block - UNIVERSAL for all Ren'Py games"""
         
         choice_block_id = id(choice_block) if choice_block else 0
-    
+
         # Check cache first
         cached_result = get_cached_consequences(choice_block_id)
         if cached_result is not None:
-            if dukeconfig.debug: print("Using cached consequences for block {}".format(choice_block_id))
+            urwmsg("Using cached consequences for block {}".format(choice_block_id))
             return cached_result
         
-        
-        if dukeconfig.debug: print("=== UNIVERSAL WALKTHROUGH ANALYZER ===")
-        if dukeconfig.debug: print("Choice block type:", type(choice_block))
+        urwmsg("=== UNIVERSAL WALKTHROUGH ANALYZER ===")
+        urwmsg("Choice block type:", type(choice_block))
         
         consequences = []
         statements = []
@@ -134,300 +144,433 @@ init -998 python:
         # Handle both list format and block format
         if isinstance(choice_block, collections.abc.Sequence) and not isinstance(choice_block, (str, bytes)):
             statements = choice_block
-            if dukeconfig.debug: print("Processing choice block as sequence with {} statements".format(len(statements)))
+            urwmsg("Processing choice block as sequence with {} statements".format(len(statements)))
         elif hasattr(choice_block, 'children'):
             statements = choice_block.children
-            if dukeconfig.debug: print("Processing choice block with children attribute")
+            urwmsg("Processing choice block with children attribute")
         elif choice_block is None:
-            if dukeconfig.debug: print("Choice block is None, returning empty consequences")
+            urwmsg("Choice block is None, returning empty consequences")
             return consequences
         else:
-            if dukeconfig.debug: print("Unknown choice block format: {}, returning empty consequences".format(type(choice_block)))
+            urwmsg("Unknown choice block format: {}, returning empty consequences".format(type(choice_block)))
             return consequences
         
         if not statements:
-            if dukeconfig.debug: print("No statements found in the choice block")
+            urwmsg("No statements found in the choice block")
             return consequences
             
-        if dukeconfig.debug: print("Number of statements:", len(statements))
+        urwmsg("Number of statements:", len(statements))
         
         # Process each statement to extract consequences
         for i, stmt in enumerate(statements):
-            if dukeconfig.debug: print("Statement {}: {}".format(i, type(stmt)))
+            urwmsg("Statement {}: {}".format(i, type(stmt)))
             
-            # Handle renpy.ast.Python statements - MOST IMPORTANT FOR VARIABLES
-            if hasattr(stmt, '__class__') and stmt.__class__.__name__ == 'Python':
-                if dukeconfig.debug: print("  Found Python statement")
-                source = None
+            try:
+                if isinstance(stmt, renpy.ast.Python):
+                    consequences.extend(analyze_python_statement_enhanced(stmt))
                 
-                # Try to get source code
-                if hasattr(stmt, 'code'):
-                    code_obj = stmt.code
-                    if dukeconfig.debug: print("  Code object type: {}".format(type(code_obj)))
-                    
-                    # Try different attributes for source
-                    for attr in ['source', 'py', 'python']:
-                        if hasattr(code_obj, attr):
-                            potential_source = getattr(code_obj, attr)
-                            if dukeconfig.debug: print("  Checking code.{}: {}".format(attr, type(potential_source)))
-                            if isinstance(potential_source, str):
-                                source = potential_source.strip()
-                                if dukeconfig.debug: print("  Found source in code.{}: {}".format(attr, repr(source)))
-                                break
-
-                # NEW: Fallback for compiled files without source
-                if not source and hasattr(stmt, 'code'):
-                    try:
-                        import dis
-                        code_obj = stmt.code.py if hasattr(stmt.code, 'py') else stmt.code
-                        
-                        # Try to get source from AST if available
-                        if hasattr(stmt, 'code') and hasattr(stmt.code, 'source'):
-                            source = stmt.code.source
-                            if dukeconfig.debug: print("  Found source via AST: {}".format(repr(source)))
-                        
-                        # Advanced bytecode analysis
-                        elif hasattr(code_obj, 'co_code'):
-                            # Analyze bytecode for variable operations
-                            instructions = list(dis.get_instructions(code_obj))
-                            
-                            for i, instr in enumerate(instructions):
-                                # Look for STORE_NAME, STORE_GLOBAL operations
-                                if instr.opname in ['STORE_NAME', 'STORE_GLOBAL', 'STORE_FAST']:
-                                    var_name = instr.argval
-                                    
-                                    # Check previous instruction for operation type
-                                    if i > 0:
-                                        prev_instr = instructions[i-1]
-                                        if prev_instr.opname == 'INPLACE_ADD':
-                                            consequences.append(('increase', var_name, '?', 'compiled: {} += ?'.format(var_name)))
-                                        elif prev_instr.opname == 'INPLACE_SUBTRACT':
-                                            consequences.append(('decrease', var_name, '?', 'compiled: {} -= ?'.format(var_name)))
-                                        elif prev_instr.opname in ['LOAD_CONST', 'LOAD_FAST']:
-                                            consequences.append(('assign', var_name, '?', 'compiled: {} = ?'.format(var_name)))
-                            
-                            if dukeconfig.debug: print("  Analyzed {} bytecode instructions".format(len(instructions)))
-                    
-                    except Exception as e:
-                        if dukeconfig.debug: print("  Advanced bytecode analysis failed: {}".format(e))
+                elif isinstance(stmt, renpy.ast.Jump):
+                    consequences.append(('jump', stmt.target, '', f'→ {stmt.target}'))
                 
-                if source:
-                    if dukeconfig.debug: print("  Processing source code: {}".format(repr(source)))
-                    
-                    # Split multi-line code into individual statements
-                    code_lines = [line.strip() for line in source.split('\n') if line.strip()]
-                    
-                    for line in code_lines:
-                        if dukeconfig.debug: print("    Analyzing line: {}".format(repr(line)))
-                        
-                        # Handle += operations (increments)
-                        if '+=' in line:
-                            try:
-                                var_name = line.split('+=')[0].strip()
-                                value_part = line.split('+=')[1].strip()
-                                
-                                # Clean variable name (remove any array indices, etc.)
-                                clean_var = re.sub(r'\[.*?\]', '', var_name)
-                                
-                                # Try to evaluate the value
-                                try:
-                                    # Handle simple numeric values
-                                    if value_part.isdigit():
-                                        actual_value = value_part
-                                    elif value_part.replace('.', '').isdigit():
-                                        actual_value = value_part
-                                    elif value_part.startswith('-') and value_part[1:].isdigit():
-                                        actual_value = value_part
-                                    else:
-                                        actual_value = value_part  # Keep original for complex expressions
-                                    
-                                    consequences.append(('increase', clean_var, actual_value, line))
-                                    if dukeconfig.debug: print("    Added increase: {} += {} (full line: {})".format(clean_var, actual_value, line))
-                                except:
-                                    consequences.append(('increase', clean_var, '?', line))
-                                    if dukeconfig.debug: print("    Added increase: {} += ? (full line: {})".format(clean_var, line))
-                            except:
-                                consequences.append(('code', 'Variable increase', '', line))
-                                if dukeconfig.debug: print("    Added generic increase code: {}".format(line))
-                        
-                        # Handle -= operations (decrements)
-                        elif '-=' in line:
-                            try:
-                                var_name = line.split('-=')[0].strip()
-                                value_part = line.split('-=')[1].strip()
-                                
-                                clean_var = re.sub(r'\[.*?\]', '', var_name)
-                                
-                                try:
-                                    if value_part.isdigit():
-                                        actual_value = value_part
-                                    elif value_part.replace('.', '').isdigit():
-                                        actual_value = value_part
-                                    else:
-                                        actual_value = value_part
-                                    
-                                    consequences.append(('decrease', clean_var, actual_value, line))
-                                    if dukeconfig.debug: print("    Added decrease: {} -= {} (full line: {})".format(clean_var, actual_value, line))
-                                except:
-                                    consequences.append(('decrease', clean_var, '?', line))
-                                    if dukeconfig.debug: print("    Added decrease: {} -= ? (full line: {})".format(clean_var, line))
-                            except:
-                                consequences.append(('code', 'Variable decrease', '', line))
-                                if dukeconfig.debug: print("    Added generic decrease code: {}".format(line))
-                        
-                        # Handle = assignments (but not == comparisons)
-                        elif '=' in line and '==' not in line and '!=' not in line and '<=' not in line and '>=' not in line:
-                            # Skip control structures
-                            if not any(line.strip().startswith(x) for x in ['if ', 'elif ', 'for ', 'while ', 'def ', 'class ', 'import ', 'from ']):
-                                try:
-                                    var_name = line.split('=')[0].strip()
-                                    value_part = line.split('=', 1)[1].strip()
-                                    
-                                    clean_var = re.sub(r'\[.*?\]', '', var_name)
-                                    
-                                    # Only include meaningful variable assignments
-                                    if not clean_var.startswith('_') and len(clean_var) > 1:
-                                        # Skip renpy.pause assignments (they're just timing)
-                                        if not clean_var.startswith('renpy.pause'):
-                                            # Truncate long values for display
-                                            display_value = value_part[:20] + ('...' if len(value_part) > 20 else '')
-                                            
-                                            consequences.append(('assign', clean_var, display_value, line))
-                                            if dukeconfig.debug: print("    Added assignment: {} = {} (full line: {})".format(clean_var, display_value, line))
-                                        else:
-                                            if dukeconfig.debug: print("    Skipped renpy.pause assignment: {}".format(line))
-                                except:
-                                    consequences.append(('code', 'Variable assignment', '', line))
-                                    if dukeconfig.debug: print("    Added generic assignment code: {}".format(line))
-                        
-                        # Handle special patterns
-                        else:
-                            # Check for boolean assignments
-                            if any(keyword in line.lower() for keyword in [' = true', ' = false']):
-                                try:
-                                    var_name = line.split('=')[0].strip()
-                                    value_part = line.split('=')[1].strip()
-                                    clean_var = re.sub(r'\[.*?\]', '', var_name)
-                                    
-                                    consequences.append(('boolean', clean_var, value_part, line))
-                                    if dukeconfig.debug: print("    Added boolean: {} = {} (full line: {})".format(clean_var, value_part, line))
-                                except:
-                                    pass
-                            
-                            # Check for function calls or method calls - BUT FILTER OUT USELESS ONES
-                            elif '(' in line and ')' in line:
-                                # List of functions to ignore (not useful for walkthrough)
-                                ignore_functions = [
-                                    'renpy.pause',
-                                    'renpy.sound',
-                                    'renpy.music', 
-                                    'renpy.with_statement',
-                                    'renpy.scene',
-                                    'renpy.show',
-                                    'renpy.hide',
-                                    'renpy.say',
-                                    'renpy.call_screen',
-                                    'renpy.transition'
-                                ]
-                                
-                                # Check if this is a function we should ignore
-                                should_ignore = False
-                                for ignore_func in ignore_functions:
-                                    if ignore_func in line:
-                                        should_ignore = True
-                                        if dukeconfig.debug: print("    Skipped ignored function: {}".format(line))
-                                        break
-                                
-                                if not should_ignore:
-                                    # This might be an important function call
-                                    consequences.append(('function', 'Function call', line[:30], line))
-                                    if dukeconfig.debug: print("    Added important function call: {}".format(line))
-                            
-                            # Any other meaningful code (but not comments or empty lines)
-                            elif len(line) > 3 and not line.startswith('#') and not line.strip().startswith('renpy.'):
-                                consequences.append(('code', 'Python code', line[:30], line))
-                                if dukeconfig.debug: print("    Added meaningful code: {}".format(line))
-                            else:
-                                if dukeconfig.debug: print("    Skipped non-meaningful line: {}".format(line))
+                elif isinstance(stmt, renpy.ast.Call):
+                    consequences.append(('call', stmt.label, '', f'📞 {stmt.label}'))
+                
+                elif isinstance(stmt, renpy.ast.Return):
+                    expr = stmt.expression if stmt.expression else 'end'
+                    consequences.append(('return', str(expr), '', f'↩ {expr}'))
+                
+                elif isinstance(stmt, renpy.ast.If):
+                    # Analyze conditional consequences
+                    for condition, block in stmt.entries:
+                        sub_consequences = extract_choice_consequences(block)
+                        if sub_consequences:
+                            consequences.append(('condition', f'If {condition}', str(len(sub_consequences)), f'❓ Conditional'))
+                
+                elif isinstance(stmt, renpy.ast.Say):
+                    urwmsg("  Skipping Say statement")
+                    continue
+                elif isinstance(stmt, renpy.ast.Scene):
+                    urwmsg("  Skipping Scene statement")
+                    continue
+                elif isinstance(stmt, renpy.ast.Show):
+                    urwmsg("  Skipping Show statement")
+                    continue
+                elif isinstance(stmt, renpy.ast.Hide):
+                    urwmsg("  Skipping Hide statement")
+                    continue
+                elif isinstance(stmt, renpy.ast.With):
+                    urwmsg("  Skipping With statement")
+                    continue
+                elif isinstance(stmt, renpy.ast.ShowLayer):
+                    urwmsg("  Skipping ShowLayer statement")
+                    continue
+                elif isinstance(stmt, renpy.ast.Camera):
+                    urwmsg("  Skipping Camera statement")
+                    continue
+                elif isinstance(stmt, renpy.ast.Transform):
+                    urwmsg("  Skipping Transform statement")
+                    continue
+                
+                # Other non-gameplay statements to skip
+                elif isinstance(stmt, renpy.ast.Pass):
+                    urwmsg("  Skipping Pass statement")
+                    continue
+                elif isinstance(stmt, renpy.ast.Label):
+                    urwmsg("  Skipping Label statement")
+                    continue
+                elif isinstance(stmt, renpy.ast.Menu):
+                    urwmsg("  Skipping nested Menu statement")
+                    continue
+                elif isinstance(stmt, renpy.ast.UserStatement):
+                    urwmsg("  Skipping UserStatement")
+                    continue
                 
                 else:
-                    # Even if we can't get source, note that there's Python code
-                    consequences.append(('code', 'Python statement', '', 'Python code executed'))
-                    if dukeconfig.debug: print("  Added generic Python statement")
-            
-            # Handle renpy.ast.Jump statements - NAVIGATION
-            elif hasattr(stmt, '__class__') and stmt.__class__.__name__ == 'Jump':
-                target = getattr(stmt, 'target', 'unknown')
-                if dukeconfig.debug: print("  Found Jump to: {}".format(target))
-                consequences.append(('jump', target, '', 'jump {}'.format(target)))
-            
-            # Handle renpy.ast.Call statements - NAVIGATION
-            elif hasattr(stmt, '__class__') and stmt.__class__.__name__ == 'Call':
-                label = getattr(stmt, 'label', 'unknown')
-                if dukeconfig.debug: print("  Found Call to: {}".format(label))
-                consequences.append(('call', label, '', 'call {}'.format(label)))
-            
-            # Handle renpy.ast.Return statements
-            elif hasattr(stmt, '__class__') and stmt.__class__.__name__ == 'Return':
-                expr = getattr(stmt, 'expression', None)
-                if expr and str(expr) != 'None':
-                    if dukeconfig.debug: print("  Found Return: {}".format(expr))
-                    consequences.append(('return', str(expr), '', 'return {}'.format(expr)))
-                else:
-                    consequences.append(('return', 'end', '', 'return'))
-            
-            # Handle renpy.ast.If statements (conditional code)
-            elif hasattr(stmt, '__class__') and stmt.__class__.__name__ == 'If':
-                if dukeconfig.debug: print("  Found conditional statement")
-                consequences.append(('condition', 'Conditional', '', 'if statement'))
-            
-            # SKIP visual elements that don't affect gameplay
-            elif hasattr(stmt, '__class__') and stmt.__class__.__name__ in ['Say', 'TranslateSay', 'Scene', 'Show', 'Hide', 'With', 'Play', 'Stop', 'Queue']:
-                if dukeconfig.debug: print("  Skipping visual/audio statement: {}".format(stmt.__class__.__name__))
-                continue
-
-            elif hasattr(stmt, '__class__') and stmt.__class__.__name__ == 'UserStatement':
-                # Try to extract info from UserStatement
-                if hasattr(stmt, 'parsed') and stmt.parsed:
-                    # This might contain the actual statement data
-                    if dukeconfig.debug: print("  UserStatement parsed: {}".format(stmt.parsed))
-            
-            # NOTE: You could add more analysis here for game-specific statements
-
-            
-            # Handle unknown but potentially important statements
-            else:
-                if dukeconfig.debug: print("  Unknown statement type: {}".format(type(stmt)))
-                class_name = stmt.__class__.__name__ if hasattr(stmt, '__class__') else 'Unknown'
-                
-                # Only include potentially important unknown statements
-                if class_name not in ['UserStatement', 'Pass', 'Label', 'Menu']:
-                    # Try to extract useful information
-                    info_found = False
-                    for attr in ['target', 'label', 'expression', 'name']:
+                    # Handle unknown statements more safely
+                    class_name = stmt.__class__.__name__
+                    
+                    # Skip common visual/audio statements by name (since they don't exist as AST classes)
+                    if class_name in ['Play', 'Stop', 'Queue', 'Music', 'Sound', 'Voice', 'Audio']:
+                        urwmsg("  Skipping audio statement by name: {}".format(class_name))
+                        continue
+                    
+                    # Skip other non-gameplay statements
+                    if class_name in ['Comment', 'Translate', 'TranslateBlock', 'EndTranslate']:
+                        urwmsg("  Skipping translation statement: {}".format(class_name))
+                        continue
+                    
+                    # Try to extract meaningful info from unknown statements
+                    urwmsg("  Processing unknown statement: {}".format(class_name))
+                    
+                    # Look for important attributes
+                    for attr in ['target', 'label', 'expression', 'name', 'value']:
                         if hasattr(stmt, attr):
                             value = getattr(stmt, attr)
                             if value and not str(value).startswith('_'):
-                                if dukeconfig.debug: print("  Statement has {}: {}".format(attr, value))
-                                consequences.append(('unknown', '{}: {}'.format(attr, str(value)), '', '{} {}'.format(class_name.lower(), value)))
-                                info_found = True
+                                consequences.append(('unknown', f'{attr}: {str(value)}', '', f'{class_name.lower()} {value}'))
+                                urwmsg("    Added unknown consequence: {} {}".format(class_name, value))
                                 break
-                    
-                    if not info_found:
-                        consequences.append(('unknown', class_name, '', class_name.lower()))
+                    else:
+                        # Only add if it might be important (not common visual elements)
+                        if class_name not in ['With', 'Scene', 'Show', 'Hide', 'Say', 'ShowLayer', 'Camera', 'Transform']:
+                            consequences.append(('unknown', class_name, '', class_name.lower()))
+                            urwmsg("    Added generic unknown: {}".format(class_name))
+            
+            except Exception as e:
+                urwmsg("  Error processing statement {}: {}".format(i, e))
+                # Don't let a single statement error break the whole analysis
+                continue
         
-        if dukeconfig.debug: print("Total meaningful consequences found: {}".format(len(consequences)))
-        for i, consequence in enumerate(consequences):
-            if len(consequence) >= 4:
-                action_type, content, value, full_code = consequence
-                if dukeconfig.debug: print("  Consequence {}: {} - {} {} | Code: {}".format(i, action_type, repr(content), repr(value), repr(full_code)))
-            else:
-                if dukeconfig.debug: print("  Consequence {}: {}".format(i, consequence))
-        
-
         cache_consequences(choice_block_id, consequences)
         return consequences
 
+
+    def analyze_python_statement_enhanced(stmt):
+        """Enhanced Python statement analysis using AST parser"""
+        consequences = []
+        
+        urwmsg("    Analyzing Python statement...")
+        
+        # Source code
+        source = None
+        if hasattr(stmt, 'code'):
+            code_obj = stmt.code
+            
+            # Try different methods to get source
+            if hasattr(code_obj, 'source'):
+                source = code_obj.source
+                urwmsg("    Got source via .source: {}".format(repr(source[:100] if source else None)))
+            elif hasattr(code_obj, 'py'):
+                source = code_obj.py
+                urwmsg("    Got source via .py: {}".format(repr(source[:100] if source else None)))
+            elif hasattr(code_obj, 'python'):
+                source = code_obj.python
+                urwmsg("    Got source via .python: {}".format(repr(source[:100] if source else None)))
+        
+        if source:
+            # Use Python's AST parser for more accurate analysis
+            urwmsg("    Using AST parser for source analysis")
+            consequences.extend(parse_python_source_enhanced(source))
+        else:
+            # Fallback to bytecode analysis for compiled games
+            urwmsg("    No source found, trying bytecode analysis")
+            consequences.extend(analyze_bytecode_enhanced(stmt))
+        
+        urwmsg("    Python analysis result: {} consequences".format(len(consequences)))
+        for i, cons in enumerate(consequences):
+            urwmsg("      {}: {}".format(i, cons))
+        
+        return consequences
+
+    def parse_python_source_enhanced(source):
+        """Enhanced Python source parsing with AST"""
+        consequences = []
+        
+        if not source:
+            urwmsg("      No source to parse")
+            return consequences
+        
+        urwmsg("      Parsing source: {}".format(repr(source[:200])))
+        
+        try:
+            # First try Python's AST parser for accuracy
+            tree = ast.parse(source)
+            
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Assign):
+                    # Handle assignments
+                    for target in node.targets:
+                        if isinstance(target, ast.Name):
+                            var_name = target.id
+                            
+                            # Try to evaluate the value
+                            try:
+                                if isinstance(node.value, ast.Constant):
+                                    value = str(node.value.value)
+                                elif hasattr(node.value, 'n'):  # Python < 3.8
+                                    value = str(node.value.n)
+                                elif hasattr(node.value, 's'):  # Python < 3.8
+                                    value = node.value.s
+                                else:
+                                    value = ast.unparse(node.value) if hasattr(ast, 'unparse') else '?'
+                                
+                                consequences.append(('assign', var_name, value, f'{var_name} = {value}'))
+                                urwmsg("        AST: Found assignment {} = {}".format(var_name, value))
+                            except:
+                                consequences.append(('assign', var_name, '?', f'{var_name} = ?'))
+                                urwmsg("        AST: Found assignment {} = ?".format(var_name))
+                
+                elif isinstance(node, ast.AugAssign):
+                    # Handle += -= etc.
+                    if isinstance(node.target, ast.Name):
+                        var_name = node.target.id
+                        op = node.op.__class__.__name__
+                        
+                        try:
+                            if isinstance(node.value, ast.Constant):
+                                value = str(node.value.value)
+                            else:
+                                value = '?'
+                            
+                            if op == 'Add':
+                                consequences.append(('increase', var_name, value, f'{var_name} += {value}'))
+                                urwmsg("        AST: Found increase {} += {}".format(var_name, value))
+                            elif op == 'Sub':
+                                consequences.append(('decrease', var_name, value, f'{var_name} -= {value}'))
+                                urwmsg("        AST: Found decrease {} -= {}".format(var_name, value))
+                        except:
+                            consequences.append(('modify', var_name, '?', f'{var_name} {op}= ?'))
+                            urwmsg("        AST: Found modify {} {}= ?".format(var_name, op))
+        
+        except SyntaxError as e:
+            urwmsg("      AST parsing failed: {}, falling back to regex".format(e))
+            # Fallback to regex-based parsing
+            pass
+        except Exception as e:
+            urwmsg("      AST parsing error: {}, falling back to regex".format(e))
+            pass
+        
+        # Always try regex parsing as well, since AST might miss some cases
+        regex_consequences = parse_with_regex_fallback(source)
+        consequences.extend(regex_consequences)
+        
+        urwmsg("      Total consequences found: {}".format(len(consequences)))
+        
+        return consequences
+
+    def analyze_bytecode_enhanced(stmt):
+        """Enhanced bytecode analysis for compiled games"""
+        consequences = []
+        
+        urwmsg("      Analyzing bytecode...")
+        
+        try:
+            import dis
+            
+            # Try to get the code object
+            code_obj = None
+            if hasattr(stmt, 'code'):
+                if hasattr(stmt.code, 'py'):
+                    code_obj = stmt.code.py
+                elif hasattr(stmt.code, 'bytecode'):
+                    code_obj = stmt.code.bytecode
+                else:
+                    code_obj = stmt.code
+            
+            if code_obj and hasattr(code_obj, 'co_code'):
+                urwmsg("        Disassembling bytecode...")
+                instructions = list(dis.get_instructions(code_obj))
+                
+                for i, instr in enumerate(instructions):
+                    if instr.opname in ['STORE_NAME', 'STORE_GLOBAL', 'STORE_FAST']:
+                        var_name = instr.argval
+                        
+                        # Check previous instruction for operation type
+                        if i > 0:
+                            prev_instr = instructions[i-1]
+                            if prev_instr.opname == 'INPLACE_ADD':
+                                consequences.append(('increase', var_name, '?', f'compiled: {var_name} += ?'))
+                                urwmsg("        Bytecode: Found increase {}".format(var_name))
+                            elif prev_instr.opname == 'INPLACE_SUBTRACT':
+                                consequences.append(('decrease', var_name, '?', f'compiled: {var_name} -= ?'))
+                                urwmsg("        Bytecode: Found decrease {}".format(var_name))
+                            elif prev_instr.opname in ['LOAD_CONST', 'LOAD_FAST']:
+                                # Try to get the constant value
+                                if prev_instr.opname == 'LOAD_CONST' and prev_instr.argval is not None:
+                                    value = str(prev_instr.argval)
+                                    consequences.append(('assign', var_name, value, f'compiled: {var_name} = {value}'))
+                                    urwmsg("        Bytecode: Found assignment {} = {}".format(var_name, value))
+                                else:
+                                    consequences.append(('assign', var_name, '?', f'compiled: {var_name} = ?'))
+                                    urwmsg("        Bytecode: Found assignment {} = ?".format(var_name))
+            else:
+                urwmsg("        No usable code object found")
+        
+        except Exception as e:
+            urwmsg("        Bytecode analysis failed: {}".format(e))
+            consequences.append(('code', 'Python statement', '', 'Python code executed'))
+        
+        return consequences
+
+    def parse_with_regex_fallback(source):
+        """Fallback regex parsing"""
+        consequences = []
+        
+        code_lines = [line.strip() for line in source.split('\n') if line.strip()]
+        
+        for line in code_lines:
+            urwmsg("    Analyzing line: {}".format(repr(line)))
+            if '+=' in line:
+                try:
+                    var_name = line.split('+=')[0].strip()
+                    value_part = line.split('+=')[1].strip()
+
+                    # Clean variable name (remove any array indices, etc.)
+                    clean_var = re.sub(r'\[.*?\]', '', var_name)
+
+                    # Try to evaluate the value
+                    try:
+                        # Handle simple numeric values
+                        if value_part.isdigit():
+                            actual_value = value_part
+                        elif value_part.replace('.', '').isdigit():
+                            actual_value = value_part
+                        elif value_part.startswith('-') and value_part[1:].isdigit():
+                            actual_value = value_part
+                        else:
+                            actual_value = value_part  # Keep original for complex expressions
+
+                        consequences.append(('increase', clean_var, actual_value, line))
+                        urwmsg("    Added increase: {} += {} (full line: {})".format(clean_var, actual_value, line))
+                    except:
+                        consequences.append(('increase', clean_var, '?', line))
+                        urwmsg("    Added increase: {} += ? (full line: {})".format(clean_var, line))
+                except:
+                    consequences.append(('code', 'Variable increase', '', line))
+                    urwmsg("    Added generic increase code: {}".format(line))
+
+            # Handle -= operations (decrements)
+            elif '-=' in line:
+                try:
+                    var_name = line.split('-=')[0].strip()
+                    value_part = line.split('-=')[1].strip()
+
+                    clean_var = re.sub(r'\[.*?\]', '', var_name)
+
+                    try:
+                        if value_part.isdigit():
+                            actual_value = value_part
+                        elif value_part.replace('.', '').isdigit():
+                            actual_value = value_part
+                        else:
+                            actual_value = value_part
+
+                        consequences.append(('decrease', clean_var, actual_value, line))
+                        urwmsg("    Added decrease: {} -= {} (full line: {})".format(clean_var, actual_value, line))
+                    except:
+                        consequences.append(('decrease', clean_var, '?', line))
+                        urwmsg("    Added decrease: {} -= ? (full line: {})".format(clean_var, line))
+                except:
+                    consequences.append(('code', 'Variable decrease', '', line))
+                    urwmsg("    Added generic decrease code: {}".format(line))
+
+            # Handle = assignments (but not == comparisons)
+            elif '=' in line and '==' not in line and '!=' not in line and '<=' not in line and '>=' not in line:
+                # Skip control structures
+                if not any(line.strip().startswith(x) for x in ['if ', 'elif ', 'for ', 'while ', 'def ', 'class ', 'import ', 'from ']):
+                    try:
+                        var_name = line.split('=')[0].strip()
+                        value_part = line.split('=', 1)[1].strip()
+
+                        clean_var = re.sub(r'\[.*?\]', '', var_name)
+
+                        # Only include meaningful variable assignments
+                        if not clean_var.startswith('_') and len(clean_var) > 1:
+                            # Skip renpy.pause assignments (they're just timing)
+                            if not clean_var.startswith('renpy.pause'):
+                                # Truncate long values for display
+                                display_value = value_part[:20] + ('...' if len(value_part) > 20 else '')
+
+                                consequences.append(('assign', clean_var, display_value, line))
+                                urwmsg("    Added assignment: {} = {} (full line: {})".format(clean_var, display_value, line))
+                            else:
+                                urwmsg("    Skipped renpy.pause assignment: {}".format(line))
+                    except:
+                        consequences.append(('code', 'Variable assignment', '', line))
+                        urwmsg("    Added generic assignment code: {}".format(line))
+
+            # Handle special patterns
+            else:
+                # Check for boolean assignments
+                if any(keyword in line.lower() for keyword in [' = true', ' = false']):
+                    try:
+                        var_name = line.split('=')[0].strip()
+                        value_part = line.split('=')[1].strip()
+                        clean_var = re.sub(r'\[.*?\]', '', var_name)
+
+                        consequences.append(('boolean', clean_var, value_part, line))
+                        urwmsg("    Added boolean: {} = {} (full line: {})".format(clean_var, value_part, line))
+                    except:
+                        pass
+                    
+                # Check for function calls or method calls - BUT FILTER OUT USELESS ONES
+                elif '(' in line and ')' in line:
+                    # List of functions to ignore (not useful for walkthrough)
+                    ignore_functions = [
+                        'renpy.pause',
+                        'renpy.sound',
+                        'renpy.music', 
+                        'renpy.with_statement',
+                        'renpy.scene',
+                        'renpy.show',
+                        'renpy.hide',
+                        'renpy.say',
+                        'renpy.call_screen',
+                        'renpy.transition',
+                        'renpy.end_replay'
+                    ]
+
+                    # Check if this is a function we should ignore
+                    should_ignore = False
+                    for ignore_func in ignore_functions:
+                        if ignore_func in line:
+                            should_ignore = True
+                            urwmsg("    Skipped ignored function: {}".format(line))
+                            break
+
+                    if not should_ignore:
+                        # This might be an important function call
+                        consequences.append(('function', 'Function call', line[:30], line))
+                        urwmsg("    Added important function call: {}".format(line))
+
+                # Any other meaningful code (but not comments or empty lines)
+                elif len(line) > 3 and not line.startswith('#') and not line.strip().startswith('renpy.'):
+                    consequences.append(('code', 'Python code', line[:30], line))
+                    urwmsg("    Added meaningful code: {}".format(line))
+                else:
+                    urwmsg("    Skipped non-meaningful line: {}".format(line))
+        
+        return consequences
 
     def get_memory_usage_info():
         """Get current memory usage of the walkthrough system"""
@@ -451,7 +594,7 @@ init -998 python:
         }
 
     def log_memory_usage():
-        """Log current memory usage for debugging"""
+        """For debugging"""
         if dukeconfig.debug:
             info = get_memory_usage_info()
             print("=== WALKTHROUGH MEMORY USAGE ===")
@@ -461,11 +604,11 @@ init -998 python:
     
     def format_consequences(consequences):
         """Format consequences for display - UNIVERSAL with better arrow support"""
-        if dukeconfig.debug: print("=== UNIVERSAL FORMATTER ===")
-        if dukeconfig.debug: print("Input consequences:", len(consequences))
+        urwmsg("=== UNIVERSAL FORMATTER ===")
+        urwmsg("Input consequences:", len(consequences))
         
         if not consequences:
-            if dukeconfig.debug: print("No consequences to format")
+            urwmsg("No consequences to format")
             return ""
         
         formatted = []
@@ -483,7 +626,7 @@ init -998 python:
             'unknown': '#f8f'        # Magenta for unknown
         }
         
-        # Define arrow symbols with fallbacks
+        # Arrow symbols with fallbacks
         arrows = {
             'jump': "{font=DejaVuSans.ttf}➤{/font}",      # Force emoji font
             'call': "{font=TwemojiCOLRv0.ttf}📞{/font}",  # Force emoji font
@@ -504,7 +647,7 @@ init -998 python:
                 value, full_code = '', ''
                 
             color = colors.get(action_type, '#fff')
-            if dukeconfig.debug: print("Processing consequence: {} - {} {} | {}".format(action_type, repr(content), repr(value), repr(full_code)))
+            urwmsg("Processing consequence: {} - {} {} | {}".format(action_type, repr(content), repr(value), repr(full_code)))
             
             if action_type == 'increase':
                 if value and value != '1' and value != '?':
@@ -594,7 +737,7 @@ init -998 python:
             final_consequences = final_consequences[:4]
         
         result = " | ".join(final_consequences)
-        if dukeconfig.debug: print("Final formatted result: {}".format(repr(result)))
+        urwmsg("Final formatted result: {}".format(repr(result)))
         return result
 
 
@@ -685,7 +828,7 @@ init -998 python:
     def cleanup_menu_registry():
         """Clean up old entries from menu registry to prevent memory leaks"""
         if len(menu_registry) > MAX_REGISTRY_SIZE:
-            if dukeconfig.debug: print("Registry cleanup: {} entries, removing oldest {}".format(len(menu_registry), REGISTRY_CLEANUP_SIZE))
+            urwmsg("Registry cleanup: {} entries, removing oldest {}".format(len(menu_registry), REGISTRY_CLEANUP_SIZE))
             
             # Sort by access time (LRU - Least Recently Used)
             sorted_items = sorted(menu_registry_access_times.items(), key=lambda x: x[1])
@@ -697,7 +840,7 @@ init -998 python:
                     del menu_registry[key_to_remove]
                 del menu_registry_access_times[key_to_remove]
             
-            if dukeconfig.debug: print("Registry after cleanup: {} entries".format(len(menu_registry)))
+            urwmsg("Registry after cleanup: {} entries".format(len(menu_registry)))
 
     def register_menu_at_runtime(items, menu_node):
         """Register menu when first encountered"""
@@ -719,7 +862,7 @@ init -998 python:
             menu_registry[menu_key] = menu_node
             menu_registry_access_times[menu_key] = renpy.get_game_runtime()  # Track access time
 
-            if dukeconfig.debug: print("Registered menu at {}:{} (registry size: {})".format(file_name, line_num, len(menu_registry)))
+            urwmsg("Registered menu at {}:{} (registry size: {})".format(file_name, line_num, len(menu_registry)))
 
     def find_menu_from_registry(items):
         """Find menu from runtime registry"""
@@ -749,19 +892,18 @@ init -998 python:
     def find_correct_menu_node(items):
         """Enhanced menu finding with runtime registry and multiple strategies"""
         try:
-            if dukeconfig.debug: print("=== ENHANCED MENU DETECTION ===")
+            urwmsg("=== ENHANCED MENU DETECTION ===")
             
             # Strategy 1: Check runtime registry first (fastest and most accurate)
             menu_node = find_menu_from_registry(items)
             if menu_node:
-                if dukeconfig.debug: print("✓ Found menu via runtime registry")
+                urwmsg("✓ Found menu via runtime registry")
                 return menu_node
             
             # Strategy 2: Use existing proximity-based method
             menu_node = find_menu_by_proximity_and_text(items)
             if menu_node:
-                if dukeconfig.debug: print("✓ Found menu via proximity and text matching")
-                # Register this successful match for future use
+                urwmsg("✓ Found menu via proximity and text matching")
                 register_menu_at_runtime(items, menu_node)
                 return menu_node
             
@@ -769,15 +911,15 @@ init -998 python:
             menu_nodes = get_all_candidate_menus(items)
             menu_node = match_by_fingerprint(items, menu_nodes)
             if menu_node:
-                if dukeconfig.debug: print("✓ Found menu via fingerprint matching")
+                urwmsg("✓ Found menu via fingerprint matching")
                 register_menu_at_runtime(items, menu_node)
                 return menu_node
             
-            if dukeconfig.debug: print("✗ No suitable menu node found")
+            urwmsg("✗ No suitable menu node found")
             return None
             
         except Exception as e:
-            if dukeconfig.debug: print("Error in enhanced menu detection: {}".format(e))
+            urwmsg("Error in enhanced menu detection: {}".format(e))
             return None
 
     def get_all_candidate_menus(items):
@@ -793,7 +935,7 @@ init -998 python:
         return menu_nodes
 
     def find_menu_by_proximity_and_text(items):
-        """Your existing proximity + text matching logic (extracted as separate function)"""
+        """proximity + text matching logic"""
         # Get current execution position
         ctx = renpy.game.context()
         current_position = ctx.current
@@ -805,9 +947,9 @@ init -998 python:
         current_file = current_position[0]
         current_line = current_position[2] if len(current_position) > 2 else 0
         
-        if dukeconfig.debug: print("Looking for menu nodes in file: {}".format(current_file))
-        if dukeconfig.debug: print("Current line: {}".format(current_line))
-        if dukeconfig.debug: print("Expected items count: {}".format(len(items)))
+        urwmsg("Looking for menu nodes in file: {}".format(current_file))
+        urwmsg("Current line: {}".format(current_line))
+        urwmsg("Expected items count: {}".format(len(items)))
         
         # Enhanced file matching for compiled games
         menu_nodes = []
@@ -828,21 +970,21 @@ init -998 python:
                     current_file_base.endswith(node_file_base.split('/')[-1])):
                     
                     menu_nodes.append(node)
-                    if dukeconfig.debug: print("Found menu node at line: {} with {} items (file: {})".format(
+                    urwmsg("Found menu node at line: {} with {} items (file: {})".format(
                         getattr(node, 'linenumber', 'unknown'), 
                         len(getattr(node, 'items', [])),
                         node_file))
         
         # Method 2: If no exact matches, search by proximity and item count
         if not menu_nodes:
-            if dukeconfig.debug: print("No exact file matches, searching all menu nodes...")
+            urwmsg("No exact file matches, searching all menu nodes...")
             all_menu_nodes = []
             
             for node_key, node in script.namemap.items():
                 if (hasattr(node, '__class__') and node.__class__.__name__ == 'Menu' and
                     hasattr(node, 'items') and len(node.items) == len(items)):
                     all_menu_nodes.append(node)
-                    if dukeconfig.debug: print("Found potential menu node with {} items".format(len(node.items)))
+                    urwmsg("Found potential menu node with {} items".format(len(node.items)))
             
             menu_nodes = all_menu_nodes
         
@@ -872,13 +1014,13 @@ init -998 python:
                         elif clean_node_text in clean_item_text or clean_item_text in clean_node_text:
                             score += 5
                         
-                        if dukeconfig.debug: print("Comparing '{}' vs '{}' (score: {})".format(
+                        urwmsg("Comparing '{}' vs '{}' (score: {})".format(
                             clean_node_text[:30], clean_item_text[:30], score))
                 
                 if score > best_score:
                     best_score = score
                     best_match = node
-                    if dukeconfig.debug: print("New best match with score: {}".format(score))
+                    urwmsg("New best match with score: {}".format(score))
         
         # Method 4: If we have a good text match, use it
         if best_match and best_score >= 10:
@@ -910,13 +1052,13 @@ init -998 python:
                             if distance < best_distance:
                                 best_distance = distance
                                 closest_match = node
-                                if dukeconfig.debug: print("Perfect match at line {} (distance: {})".format(node.linenumber, distance))
+                                urwmsg("Perfect match at line {} (distance: {})".format(node.linenumber, distance))
                     
                     if closest_match:
                         best_match = closest_match
-                        if dukeconfig.debug: print("Selected closest perfect match at line {} (distance: {})".format(closest_match.linenumber, best_distance))
+                        urwmsg("Selected closest perfect match at line {} (distance: {})".format(closest_match.linenumber, best_distance))
             
-            if dukeconfig.debug: print("Selected menu node by text matching (score: {})".format(best_score))
+            urwmsg("Selected menu node by text matching (score: {})".format(best_score))
             return best_match
         
         # Method 5: Fallback to line proximity if we have potential nodes
@@ -930,18 +1072,18 @@ init -998 python:
                     if distance < best_distance:
                         best_distance = distance
                         best_node = node
-                        if dukeconfig.debug: print("Node at line {} (distance: {})".format(node.linenumber, distance))
+                        urwmsg("Node at line {} (distance: {})".format(node.linenumber, distance))
             
             if best_node:
-                if dukeconfig.debug: print("Selected menu node by line proximity (distance: {})".format(best_distance))
+                urwmsg("Selected menu node by line proximity (distance: {})".format(best_distance))
                 return best_node
         
         # Method 6: Last resort - find ANY menu node with matching item count
-        if dukeconfig.debug: print("Last resort: searching for any menu with {} items...".format(len(items)))
+        urwmsg("Last resort: searching for any menu with {} items...".format(len(items)))
         for node_key, node in script.namemap.items():
             if (hasattr(node, '__class__') and node.__class__.__name__ == 'Menu' and
                 hasattr(node, 'items') and len(node.items) == len(items)):
-                if dukeconfig.debug: print("Found fallback menu node with matching item count")
+                urwmsg("Found fallback menu node with matching item count")
                 return node
         
         return None
@@ -950,123 +1092,74 @@ init -998 python:
     cleanup_counter = 0
     CLEANUP_INTERVAL = 100  # Clean up every 100 menu calls
 
-    # Hook the menu function - UNIVERSAL for all Ren'Py games
-    if hasattr(renpy.exports, 'menu'):
-        original_menu = renpy.exports.menu
+
+    original_menu = renpy.exports.menu
+    
+    def universal_walkthrough_menu(items, set_expr=None, args=None, kwargs=None, item_arguments=None, **extra_kwargs):
+        """Enhanced walkthrough menu wrapper with correct signature"""
+        global cleanup_counter
         
-        def universal_walkthrough_menu(items, set=None, args=None, kwargs=None, item_arguments=None):
-            """Universal walkthrough menu function for any Ren'Py game"""
-            global cleanup_counter
-            
-            if dukeconfig.debug: print("=== UNIVERSAL WALKTHROUGH MENU ===")
-            # Periodic memory cleanup
-            cleanup_counter += 1
-            if cleanup_counter >= CLEANUP_INTERVAL:
-                cleanup_counter = 0
-                cleanup_menu_registry()
-                
-                # Also clean up consequence cache
-                if len(consequence_cache) > MAX_CONSEQUENCE_CACHE:
-                    if dukeconfig.debug: print("Cleaning up consequence cache")
-                    sorted_cache = sorted(consequence_cache_access.items(), key=lambda x: x[1])
-                    for i in range(50):  # Remove 50 oldest entries
-                        if i < len(sorted_cache):
-                            old_key = sorted_cache[i][0]
-                            if old_key in consequence_cache:
-                                del consequence_cache[old_key]
-                            if old_key in consequence_cache_access:
-                                del consequence_cache_access[old_key]
-                
-                # Log memory usage every cleanup
-                log_memory_usage()
+        urwmsg("=== UNIVERSAL WALKTHROUGH MENU ===")
+        urwmsg("Arguments received: items={}, set_expr={}, args={}, kwargs={}, item_arguments={}".format(len(items) if items else 0, set_expr, args, kwargs, item_arguments))
+        
+        
+        cleanup_counter += 1
+        if cleanup_counter >= CLEANUP_INTERVAL:
+            cleanup_counter = 0
+            cleanup_menu_registry()
+            log_memory_usage()
 
-            if dukeconfig.debug: print("Items received:", len(items) if items else 0)
+        if not hasattr(persistent, 'universal_walkthrough_enabled'):
+            persistent.universal_walkthrough_enabled = True
+        
+        if not persistent.universal_walkthrough_enabled:
+            return original_menu(items, set_expr, args, kwargs, item_arguments)
 
-
-            # NOTE: Add file type and script debugging
-            if dukeconfig.debug: 
-                print("=== SCRIPT DEBUG INFO ===")
-                ctx = renpy.game.context()
-                if ctx and ctx.current:
-                    filename = ctx.current[0]
-                    print("Current file: {}".format(filename))
-                    print("File type: {}".format('rpyc' if filename.endswith('.rpyc') else 'rpy' if filename.endswith('.rpy') else 'other'))
+        try:
+            menu_node = find_correct_menu_node(items)
+            
+            if menu_node and hasattr(menu_node, 'items'):
+                enhanced_items = []
                 
-                # Count total menu nodes in script
-                menu_count = 0
-                for node_key, node in renpy.game.script.namemap.items():
-                    if hasattr(node, '__class__') and node.__class__.__name__ == 'Menu':
-                        menu_count += 1
-                print("Total menu nodes in script: {}".format(menu_count))
-                
-                # Show first few items for debugging
-                if items:
-                    for i, item in enumerate(items[:2]):  # Show first 2 items
-                        print("Item {}: {}".format(i, repr(item[0]) if len(item) > 0 else 'empty'))
-            
-            
-            # Check if walkthrough is enabled (create settings if they don't exist)
-            if not hasattr(persistent, 'universal_walkthrough_enabled'):
-                persistent.universal_walkthrough_enabled = True
-            
-            if not persistent.universal_walkthrough_enabled:
-                if dukeconfig.debug: print("Universal walkthrough disabled, calling original menu")
-                return original_menu(items, set, args, kwargs, item_arguments)
-            
-            try:
-                # Find the correct menu node for these specific items
-                menu_node = find_correct_menu_node(items)
-                if dukeconfig.debug: print("Found menu node: {}".format(menu_node is not None))
-                
-                if menu_node and hasattr(menu_node, 'items'):
-                    if dukeconfig.debug: print("Menu node has {} items".format(len(menu_node.items)))
-                    enhanced_items = []
+                for i, item in enumerate(items):
+                    if isinstance(item, (list, tuple)) and len(item) >= 1:
+                        caption_text = item[0]
+                        rest = item[1:] if len(item) > 1 else ()
+                    else:
+                        caption_text = str(item)
+                        rest = ()
                     
-                    for i, (caption, condition, value) in enumerate(items):
-                        enhanced_caption = caption
+                    enhanced_caption = caption_text
+                    
+                    if i < len(menu_node.items):
+                        menu_choice = menu_node.items[i]
                         
-                        # Get corresponding menu choice from AST
-                        if i < len(menu_node.items):
-                            menu_choice = menu_node.items[i]
-                            if dukeconfig.debug: print("Processing menu choice {}: {}".format(i, type(menu_choice)))
+                        if len(menu_choice) >= 3 and menu_choice[2]:
+                            choice_block = menu_choice[2]
+                            consequences = extract_choice_consequences(choice_block)
                             
-                            if len(menu_choice) >= 3 and menu_choice[2]:
-                                choice_block = menu_choice[2]
-                                if dukeconfig.debug: print("Found choice block for choice {}: {}".format(i, type(choice_block)))
-                                consequences = extract_choice_consequences(choice_block)
-                                
-                                if consequences:
-                                    formatted_consequences = format_consequences(consequences)
-                                    if dukeconfig.debug: print("Adding WT for choice {}: {}".format(i, formatted_consequences))
-                                    enhanced_caption += "\n{{size={}}}{{color=#888}}WT:{{/color}} ".format(persistent.universal_wt_text_size if hasattr(persistent, 'universal_wt_text_size') else 16) + formatted_consequences + "{/size}"
-                                else:
-                                    if dukeconfig.debug: print("No consequences found for choice {}".format(i))
-                            else:
-                                if dukeconfig.debug: print("No choice block for choice {}".format(i))
-                        
-                        enhanced_items.append((enhanced_caption, condition, value))
+                            if consequences:
+                                formatted_consequences = format_consequences(consequences)
+                                enhanced_caption += "\n{{size={}}}{{color=#888}}WT:{{/color}} ".format(
+                                    persistent.universal_wt_text_size if hasattr(persistent, 'universal_wt_text_size') else 25
+                                ) + formatted_consequences + "{/size}"
                     
-                    if dukeconfig.debug: print("Calling original menu with enhanced items")
-                    return original_menu(enhanced_items, set, args, kwargs, item_arguments)
-                else:
-                    if dukeconfig.debug: print("No menu node found or node has no items")
-            
-            except RENPY_CONTROL_EXCEPTIONS:
-                # Re-raise Ren'Py control flow exceptions - these are NOT errors!
-                raise
+                    if rest:
+                        enhanced_items.append((enhanced_caption,) + rest)
+                    else:
+                        enhanced_items.append(enhanced_caption)
                 
-            except Exception as e:
-                if dukeconfig.debug: print("Error in universal_walkthrough_menu:", e)
-                import traceback
-                traceback.print_exc()
-            
-            # Fallback to original
-            if dukeconfig.debug: print("Falling back to original menu")
-            return original_menu(items, set, args, kwargs, item_arguments)
+                return original_menu(enhanced_items, set_expr, args, kwargs, item_arguments)
         
-        renpy.exports.menu = universal_walkthrough_menu
-        if dukeconfig.debug: print("Universal walkthrough menu hook installed")
-
+        except RENPY_CONTROL_EXCEPTIONS:
+            raise
+        except Exception as e:
+            urwmsg("Error in walkthrough menu: {}".format(e))
+        
+        return original_menu(items, set_expr, args, kwargs, item_arguments)
+    
+    # Replace the menu function
+    renpy.exports.menu = universal_walkthrough_menu
 
     # Clear caches on game quit
     def on_quit_game():
@@ -1074,50 +1167,281 @@ init -998 python:
         global consequence_cache, consequence_cache_access
         consequence_cache.clear()
         consequence_cache_access.clear()
-        if dukeconfig.debug: print("Cleared consequence cache on quit")
+        urwmsg("Cleared consequence cache on quit")
 
     config.quit_callbacks.append(on_quit_game)
 
-    # Set default persistent values
     if not hasattr(persistent, 'universal_walkthrough_enabled'):
         persistent.universal_walkthrough_enabled = True
-        if dukeconfig.debug: print("Set universal_walkthrough_enabled to True")
+        urwmsg("Set universal_walkthrough_enabled to True")
     
-    print("Universal Ren'Py Walkthrough System v1.0 Loaded")
+    print("Universal Ren'Py Walkthrough System v1.1 Loaded")
+
+
+    
+    def clear_walkthrough_caches():
+        """Safely clear walkthrough caches"""
+        global menu_registry, consequence_cache, consequence_cache_access, menu_node_weakrefs
+        
+        try:
+            menu_registry.clear()
+            consequence_cache.clear()
+            consequence_cache_access.clear()
+            menu_node_weakrefs.clear()
+            
+            if dukeconfig.debug: 
+                print("Walkthrough caches cleared successfully")
+        except Exception as e:
+            if dukeconfig.debug: 
+                print("Error clearing caches: {}".format(e))
+
+
+
+style wt_toggle_button:
+    background "#333"
+    hover_background "#555"
+    selected_background "#4a9eff"
+    
+style wt_size_button:
+    background "#444"
+    hover_background "#666"
+    
+style wt_preset_button:
+    background "#333"
+    hover_background "#6bb8ff"
+    
+style wt_debug_button:
+    background "#ff6b6b"
+    hover_background "#ff8c8c"
+    color "#fff"
+    xsize 100
+    ysize 30
+    
+style wt_close_button:
+    background "#4a9eff"
+    hover_background "#6bb8ff"
+
+transform wt_screen_show:
+    alpha 0.0 yoffset -100
+    ease 0.5 alpha 1.0 yoffset 0
+
+transform wt_screen_hide:
+    alpha 1.0 yoffset 0
+    ease 0.3 alpha 0.0 yoffset -50
+
 
 
 screen universal_walkthrough_preferences():
     modal True
+    zorder 200
+    
+    add "#000" alpha 0.0:
+        at transform:
+            alpha 0.0
+            ease 0.3 alpha 0.8
+    
+    key "game_menu" action Hide("universal_walkthrough_preferences", transition=dissolve)
+    key "K_ESCAPE" action Hide("universal_walkthrough_preferences", transition=dissolve)
     
     frame:
-        background Color("#222")
         xalign 0.5
         yalign 0.5
+        xmaximum 700
+        ymaximum 500
+        background Frame("#000a", 20, 20)
+        xpadding 40
+        ypadding 30
+        
+        at transform:
+            yoffset -100
+            alpha 0.0
+            ease 0.4 yoffset 0 alpha 1.0
+        
         vbox:
+            spacing 25
             xalign 0.5
-            text "Universal Walkthrough Settings" size 24
             
-            textbutton "Enable Walkthrough: {}".format("ON" if persistent.universal_walkthrough_enabled else "OFF"):
-                action ToggleVariable("persistent.universal_walkthrough_enabled")
+            vbox:
+                spacing 10
+                xalign 0.5
+                
+                text "{color=#4a9eff}{size=32}{b}Universal Walkthrough System{/b}{/size}{/color}":
+                    xalign 0.5
+                    at transform:
+                        alpha 0.0
+                        pause 0.2
+                        ease 0.5 alpha 1.0
+                
+                text "{color=#8cc8ff}{size=18}{i}Enhance your gaming experience{/i}{/size}{/color}":
+                    xalign 0.5
+                    at transform:
+                        alpha 0.0
+                        pause 0.4
+                        ease 0.5 alpha 1.0
+                
+                add "#4a9eff" xsize 400 ysize 2 xalign 0.5:
+                    at transform:
+                        xsize 0
+                        pause 0.6
+                        ease 0.8 xsize 400
             
-            text "Text Size: {}".format(persistent.universal_wt_text_size)
-            hbox:
-                textbutton "-" action SetVariable("persistent.universal_wt_text_size", max(12, persistent.universal_wt_text_size - 2))
-                textbutton "+" action SetVariable("persistent.universal_wt_text_size", min(40, persistent.universal_wt_text_size + 2))
+            null height 10
             
-            # Memory management options
-            text "Memory Usage: {} entries".format(len(menu_registry) + len(consequence_cache))
-            
-            textbutton "Clear Cache" action Function(lambda: (menu_registry.clear(), consequence_cache.clear()))
+            vbox:
+                spacing 20
+                xalign 0.5
+                
+                hbox:
+                    spacing 15
+                    xalign 0.5
+                    at transform:
+                        alpha 0.0
+                        xoffset -50
+                        pause 0.8
+                        ease 0.4 alpha 1.0 xoffset 0
+                    
+                    text "{color=#fff}{size=20}Enable Walkthrough:{/size}{/color}"
+                    
+                    textbutton (_("ON") if persistent.universal_walkthrough_enabled else _("OFF")):
+                        action ToggleVariable("persistent.universal_walkthrough_enabled")
+                        style "wt_toggle_button"
+                        text_size 18
+                        xsize 80
+                        ysize 35
+                        if persistent.universal_walkthrough_enabled:
+                            background Frame("gui/button/choice_idle_background.png", 10, 10)
+                            text_color "#4a9eff"
+                        else:
+                            background Frame("gui/button/choice_hover_background.png", 10, 10)
+                            text_color "#ff6b6b"
+                        hover_background Frame("gui/button/choice_hover_background.png", 10, 10)
+                        text_hover_color "#fff"
+                        text_xalign 0.5
+                
+                vbox:
+                    spacing 10
+                    xalign 0.5
+                    at transform:
+                        alpha 0.0
+                        xoffset 50
+                        pause 1.0
+                        ease 0.4 alpha 1.0 xoffset 0
+                    
+                    text "{color=#fff}{size=18}Text Size: {color=#4a9eff}{size=22}{b}[persistent.universal_wt_text_size]{/b}{/size}{/color}{/size}":
+                        xalign 0.5
+                    
+                    hbox:
+                        spacing 10
+                        xalign 0.5
+                        
+                        textbutton "−":
+                            action If(persistent.universal_wt_text_size > 12, SetVariable("persistent.universal_wt_text_size", persistent.universal_wt_text_size - 2), None)
+                            style "wt_size_button"
+                            text_size 24
+                            xsize 40
+                            ysize 40
+                            text_xalign 0.5
+                        
+                        frame:
+                            background "#2a2a2a"
+                            xsize 300
+                            ysize 20
+                            
+                            bar:
+                                value AnimatedValue(persistent.universal_wt_text_size, 40, delay=0.2, old_value=12)
+                                left_bar Frame("#4a9eff", 5, 5) 
+                                right_bar Frame("#444", 5, 5)
+                                thumb None
+                                xsize 280
+                                ysize 16
+                                xalign 0.5
+                                yalign 0.5
+                        
+                        textbutton "+":
+                            action If(persistent.universal_wt_text_size < 40, SetVariable("persistent.universal_wt_text_size", persistent.universal_wt_text_size + 2), None)
+                            style "wt_size_button"
+                            text_size 24
+                            xsize 40
+                            ysize 40
+                            text_xalign 0.5
+                
+                hbox:
+                    spacing 8
+                    xalign 0.5
+                    at transform:
+                        alpha 0.0
+                        pause 1.2
+                        ease 0.4 alpha 1.0
+                    
+                    text "{color=#bbb}{size=14}Quick sizes:{/size}{/color}"
+                    
+                    for size in [12, 16, 20, 25, 30, 35, 40]:
+                        textbutton "[size]":
+                            action SetVariable("persistent.universal_wt_text_size", size)
+                            style "wt_preset_button"
+                            text_size 14
+                            xsize 35
+                            ysize 25
+                            if persistent.universal_wt_text_size == size:
+                                background "#4a9eff"
+                                text_color "#fff"
+                            else:
+                                background "#333"
+                                text_color "#bbb"
+                            hover_background "#6bb8ff"
+                            text_hover_color "#fff"
+                            text_xalign 0.5
             
             if dukeconfig.debug:
-                textbutton "Show Memory Info" action Function(log_memory_usage)
+                vbox:
+                    spacing 10
+                    xalign 0.5
+                    at transform:
+                        alpha 0.0
+                        pause 1.4
+                        ease 0.4 alpha 1.0
+                    
+                    text "{color=#ffaa00}{size=16}{b}Debug Information{/b}{/size}{/color}":
+                        xalign 0.5
+                    
+                    text "{color=#ccc}{size=14}Registry: [len(menu_registry)] | Cache: [len(consequence_cache)] entries{/size}{/color}":
+                        xalign 0.5
+                    
+                    hbox:
+                        spacing 15
+                        xalign 0.5
+
+                        if not renpy.get_screen("choice"):
+                            textbutton "Clear Cache":
+                                action Function(clear_walkthrough_caches)
+                                style "wt_debug_button"
+                                text_size 14
+                                text_xalign 0.5
+                            
+                        textbutton "Show Memory":
+                            action Function(log_memory_usage)
+                            style "wt_debug_button"
+                            text_size 14
+                            text_xalign 0.5
             
-            textbutton "Close" action ToggleScreen("universal_walkthrough_preferences")
+            null height 10
+            
+            textbutton "{size=18}Close{/size}":
+                action Hide("universal_walkthrough_preferences", transition=dissolve)
+                style "wt_close_button"
+                xalign 0.5
+                xsize 120
+                ysize 40
+                at transform:
+                    alpha 0.0
+                    pause 1.6
+                    ease 0.4 alpha 1.0
+                text_xalign 0.5
+
 
 init 999 python:
     config.underlay.append(
         renpy.Keymap(
-            alt_K_w = lambda: renpy.run(ToggleScreen("universal_walkthrough_preferences"))
+            alt_K_w = lambda: renpy.run(Show("universal_walkthrough_preferences"))
         )
     )
