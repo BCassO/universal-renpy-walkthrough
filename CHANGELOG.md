@@ -10,6 +10,40 @@ All notable changes to the Universal Ren'Py Walkthrough System will be documente
 - Custom styling options
 - Save/load walkthrough preferences
 
+
+## [1.1] - 2025-06-10
+
+### 🚀 Major Enhancements
+- Enhanced AST Analysis Engine
+- Better detection of variable assignments, increments, and function calls
+- Implemented multiple fallback strategies for menu node detection
+- Added fingerprint-based matching using execution context
+- Enhanced proximity and text matching algorithms
+- Improved handling of compiled vs source games
+
+### 🎨 UI/UX Improvements
+- Redesigned Preferences Screen
+
+### ⚡ Performance Optimizations
+- Better cache management and cleanup
+- Reduced redundant processing
+- Reduced unnecessary computations
+- Improved startup performance
+
+### 🛠 Technical Changes
+- Better organized function architecture
+- More robust error recovery
+- Improved handling of edge cases
+
+### 🐛 Fixes
+- Improved handling of malformed choice blocks
+- Enhanced stability during long gaming sessions
+- Enhanced debug information system
+
+### Note: This update maintains full backward compatibility with v1.0 while significantly improving performance, reliability, and user experience.
+
+# --
+
 ## [1.0-beta] - 2025-06-09
 
 ### Added
