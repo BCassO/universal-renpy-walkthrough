@@ -10,6 +10,20 @@ All notable changes to the Universal Ren'Py Walkthrough System will be documente
 - Custom styling options
 - Save/load walkthrough preferences
 
+## [1.2.0 - Enhanced] - 2025-06-16
+
+### 🚀 Major Enhancements
+- **Fixed choice consequences duplication error** - Resolved issue where identical consequences were shown multiple times for the same choice
+- **Multiple fallback strategy for choice consequences formatting** - Implemented enhanced fallback system to ensure consequences are properly displayed across different game structures
+- **Adjustable consequence limit** - Players can now customize how many consequences they want to see for each choice through the universal walktrough settings menu
+
+### 🔧 Technical Improvements
+- Better error handling for malformed game code
+
+### 📝 Notes
+- This version focuses on stability and user customization
+- Recommended for users experiencing duplicate consequences in v1.1
+- All settings are preserved when upgrading from previous versions
 
 ## [1.1] - 2025-06-10
 
