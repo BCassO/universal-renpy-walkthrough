@@ -26,7 +26,8 @@ A universal walkthrough mod that automatically shows choice consequences for **A
 
 ## 📸 Screenshots
 
-*[TO BE ADDED]*
+![Preview 1](screenshots/capture_1.png)
+![Preview 2](screenshots/capture_2.png)
 
 ### Before (Normal Menu):
 ```

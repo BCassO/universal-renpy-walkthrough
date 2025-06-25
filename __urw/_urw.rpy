@@ -1,40 +1,35 @@
-############################################################
-######### Universal Walkthrough System v1.2 ################
-#########      (C) Knox Emberlyn 2025       ################
-############################################################
-##
-## INSTALLATION:
-##   1. Download this __urw.rpy file
-##   2. Place it in your game's game\ folder  
-##   3. Start or load your game
-##   4. Press Alt+W in-game to open walkthrough preferences
-##
-## COMPATIBILITY:
-##   - Tested on various Ren'Py 8.x.x engines
-##   - Should work with any Ren'Py 8 series game
-##   - Works with both compiled (.rpyc) and source (.rpy) games
-##
-## TROUBLESHOOTING:
-##   If the walkthrough doesn't work with your game:
-##   1. Open this file in a text editor
-##   2. Change line 40: debug = False  ->  debug = True  
-##   3. Run the game and try some menu choices
-##   4. Press Shift+O to open console and check for error messages
-##   5. Submit bug reports with debug output to: 
-##      https://github.com/BCassO/universal-renpy-walkthrough/issues
-##
-## BUG REPORTS:
-##   Before reporting issues, please:
-##   - Search existing issues at: https://github.com/BCassO/universal-renpy-walkthrough/issues
-##   - Include your game name, Ren'Py version, and debug output
-##   - Provide details - "it doesn't work" helps nobody!
-##
-## SUPPORT:
-##   Repository: https://github.com/BCassO/universal-renpy-walkthrough
-##   Issues: https://github.com/BCassO/universal-renpy-walkthrough/issues
-##   Documentation: https://github.com/BCassO/universal-renpy-walkthrough/blob/main/README.md
-##
-#################################################################
+####          Universal Walkthrough System v1.4            ####
+####             (C) Knox Emberlyn 2025                    ####
+
+# This file is part of the Universal Walkthrough System for Ren'Py created by Knox Emberlyn.
+
+init -999:
+    define persistent.universal_wt_filters = {
+            'conditions': True,      # if/elif/else statements
+            'jumps': True,          # jump statements  
+            'calls': True,          # call statements
+            'returns': True,        # return statements
+            'increases': True,      # variable += operations
+            'decreases': True,      # variable -= operations
+            'assignments': True,    # variable = value
+            'booleans': True,       # variable = True/False
+            'functions': True,      # function calls
+            'code': True,          # generic code blocks
+            'unknown': False       # unknown statement types
+        }
+
+    define persistent.universal_wt_name_filters = {
+            'hide_underscore': True,    # Hide variables starting with _
+            'hide_renpy': True,         # Hide renpy.* calls
+            'hide_config': False,       # Hide config.* variables
+            'hide_store': True,         # Hide store.* variables
+            'custom_prefix': "",        # Custom prefix to hide (user input)
+            'custom_contains': ""       # Custom text to hide if contains (user input)
+        }
+
+    define persistent.universal_wt_text_size = 25
+    define persistent.universal_wt_max_consequences = 2
+    define persistent.universal_wt_show_all_available = True
 
 init -999 python in dukeconfig:
     debug = False
@@ -66,14 +61,13 @@ init -998 python:
         renpy.game.EndReplay
     )
 
-    persistent.universal_wt_text_size = 25
-    persistent.universal_wt_max_consequences = 2
-    persistent.universal_wt_show_all_available = True
-
+    
+    # Caching with execution context awareness
     consequence_cache = {}
     consequence_cache_access = {}
     MAX_CONSEQUENCE_CACHE = 200
 
+    # Execution context tracking
     menu_registry = {}
     menu_registry_access_times = {}
     MAX_REGISTRY_SIZE = 500
@@ -95,12 +89,14 @@ init -998 python:
             urwmsg("  filename: {}".format(filename))
             urwmsg("  linenumber: {}".format(linenumber))
             
-            
+            # Try to get the actual current position from the call stack or other sources
             actual_line = linenumber
             
+            # Check if we can get better position info from the script execution
             if hasattr(renpy.game, 'context'):
                 game_ctx = renpy.game.context()
                 if hasattr(game_ctx, 'call_stack') and game_ctx.call_stack:
+                    # Try to get from call stack
                     for call_entry in reversed(game_ctx.call_stack):
                         if hasattr(call_entry, 'return_point') and call_entry.return_point:
                             potential_line = call_entry.return_point[2] if len(call_entry.return_point) > 2 else 0
@@ -273,7 +269,7 @@ init -998 python:
             return 'exact', 0
 
     def find_exact_menu_match(items, execution_context):
-        """Find exact menu match - with strategy storage"""
+        """Find exact menu match"""
         try:
             if not execution_context:
                 return None
@@ -286,6 +282,7 @@ init -998 python:
             urwmsg("Looking for menu match in {} at line {} (label: {})".format(
                 filename, linenumber, current_label))
             
+            # DEBUG: Show what we're looking for
             urwmsg("SEARCH TARGET:")
             urwmsg("  Looking for {} menu items:".format(len(items)))
             for i, item in enumerate(items):
@@ -297,6 +294,7 @@ init -998 python:
             all_menus = []
             for node_key, node in script.namemap.items():
                 if isinstance(node, renpy.ast.Menu) and hasattr(node, 'filename') and hasattr(node, 'items'):
+                    # Check filename match (handle .rpy/.rpyc variations)
                     node_file = node.filename.replace('.rpyc', '.rpy') if node.filename else ''
                     check_file = filename.replace('.rpyc', '.rpy') if filename else ''
                     
@@ -318,7 +316,7 @@ init -998 python:
                             clean_menu = re.sub(r'\{[^}]*\}', '', menu_text).strip()
                             urwmsg("    [{}]: '{}' (clean: '{}')".format(j, menu_text, clean_menu))
             
-            # Filter candidates with flexible item count matching
+            # ENHANCED: Filter candidates with flexible item count matching
             candidates = []
             for node in all_menus:
                 if hasattr(node, 'items') and len(node.items) > 0:
@@ -420,7 +418,7 @@ init -998 python:
                 except Exception as e:
                     urwmsg("Warning: Could not store strategy for node: {}".format(e))
 
-            # Process immediate candidates first (ULTRA PRECISE)
+            # Process immediate candidates first
             if immediate_candidates:
                 urwmsg("Using IMMEDIATE candidates ({}) - within 20 lines".format(len(immediate_candidates)))
                 # Sort by distance first, then by score, then prefer exact matches
@@ -441,12 +439,10 @@ init -998 python:
                 close_candidates.sort(key=lambda x: (x[2], -x[1], 0 if x[3] == 'exact' else 1))
                 best_node, score, distance, strategy, offset = close_candidates[0]
                 
-                # Store strategy on node
                 store_strategy_on_node(best_node, strategy, offset)
                 
                 urwmsg("Found CLOSE menu match at {}:{} (score: {}, distance: {}, strategy: {})".format(
                     best_node.filename, best_node.linenumber, score, distance, strategy))
-                
                 
                 urwmsg("DEBUG: No immediate matches found. Expected menu around line {} ± 20 (range {}-{})".format(
                     linenumber, linenumber-20, linenumber+20))
@@ -465,7 +461,6 @@ init -998 python:
                     perfect_distant.sort(key=lambda x: (x[2], 0 if x[3] == 'exact' else 1))  # Sort by distance, prefer exact
                     best_node, score, distance, strategy, offset = perfect_distant[0]
                     
-                    # Store strategy on node
                     store_strategy_on_node(best_node, strategy, offset)
                     
                     urwmsg("Found DISTANT perfect menu match at {}:{} (distance: {})".format(
@@ -481,7 +476,7 @@ init -998 python:
             return None
     
     def register_menu_with_context(items, menu_node, execution_context):
-        """Register menu with enhanced context tracking"""
+        """Register menu with context tracking"""
         try:
             cleanup_menu_registry()
             
@@ -510,7 +505,7 @@ init -998 python:
             }
             menu_registry_access_times[menu_key] = time.time()
             
-            urwmsg("Registered enhanced menu at {}:{} with fingerprint".format(
+            urwmsg("Registered menu at {}:{} with fingerprint".format(
                 execution_context['filename'], execution_context['linenumber']))
             
         except Exception as e:
@@ -564,8 +559,9 @@ init -998 python:
                 del menu_registry_access_times[key_to_remove]
 
     def find_correct_menu_node_enhanced(items):
+        """Enhanced menu finding function with multiple strategies"""
         try:
-            urwmsg("=== ENHANCED MENU DETECTION v1.2 ===")
+            urwmsg("=== KNOX MENU DETECTION v1.4 ===")
             
             # Get current execution context
             execution_context = get_execution_context_signature()
@@ -606,14 +602,14 @@ init -998 python:
 
     
     def extract_choice_consequences(choice_block):
-        """Enhanced consequence extraction"""
+        """Consequence extraction from a choice block with enhanced handling"""
         choice_block_id = id(choice_block) if choice_block else 0
-
+    
         cached_result = get_cached_consequences(choice_block_id)
         if cached_result is not None:
             return cached_result
         
-        urwmsg("=== ENHANCED CONSEQUENCE ANALYZER ===")
+        urwmsg("=== URW CONSEQUENCE ANALYZER ===")
         
         consequences = []
         statements = []
@@ -630,6 +626,7 @@ init -998 python:
         if not statements:
             return consequences
         
+        # Statement processing with improved conditional handling
         for i, stmt in enumerate(statements):
             try:
                 if isinstance(stmt, renpy.ast.Python):
@@ -646,10 +643,86 @@ init -998 python:
                     consequences.append(('return', str(expr), '', f'↩ {expr}'))
                 
                 elif isinstance(stmt, renpy.ast.If):
-                    for condition, block in stmt.entries:
-                        sub_consequences = extract_choice_consequences(block)
+                    # Handle all condition types properly
+                    urwmsg("PROCESSING IF STATEMENT with {} entries".format(len(stmt.entries)))
+                    
+                    condition_details = []
+                    total_sub_consequences = []
+                    
+                    for entry_idx, (condition, block) in enumerate(stmt.entries):
+                        urwmsg("  Entry {}: condition = {}".format(entry_idx, condition))
+                        
+                        # Get sub-consequences for this branch
+                        sub_consequences = extract_choice_consequences(block) if block else []
                         if sub_consequences:
-                            consequences.append(('condition', f'If {condition}', str(len(sub_consequences)), f'❓ Conditional'))
+                            total_sub_consequences.extend(sub_consequences)
+                        
+                        # Process the condition text
+                        if condition is not None:
+                            # This is an 'if' or 'elif' branch
+                            condition_str = str(condition).strip()
+                            
+                            # Clean up the condition text
+                            if condition_str.startswith('store.'):
+                                condition_str = condition_str[6:]
+                            
+                            # Handle common conditions specially
+                            if 'config.developer' in condition_str:
+                                condition_str = condition_str.replace('config.developer', 'developer_mode')
+                            if '_in_replay' in condition_str:
+                                condition_str = condition_str.replace('_in_replay', 'in_replay')
+                            
+                            # Limit length for display
+                            if len(condition_str) > 35:
+                                condition_str = condition_str[:32] + "..."
+                            
+                            # Determine the condition type
+                            if entry_idx == 0:
+                                condition_details.append(f"if {condition_str}")
+                            else:
+                                condition_details.append(f"elif {condition_str}")
+                        else:
+                            # This is an 'else' branch
+                            condition_details.append("else")
+                    
+                    urwmsg("  Condition details: {}".format(condition_details))
+                    urwmsg("  Total sub-consequences: {}".format(len(total_sub_consequences)))
+                    
+                    # Decide how to represent this conditional block
+                    if len(condition_details) == 0:
+                        # No conditions found, skip
+                        continue
+                    elif len(condition_details) == 1:
+                        # Single if statement
+                        condition_text = condition_details[0]
+                        consequences.append(('condition', condition_text, str(len(total_sub_consequences)), f'❓ {condition_text}'))
+                    elif len(condition_details) == 2 and condition_details[1] == "else":
+                        # if-else block
+                        condition_text = f"{condition_details[0]}-else"
+                        consequences.append(('condition', condition_text, str(len(total_sub_consequences)), f'❓ {condition_text}'))
+                    else:
+                        # Complex if-elif-else block
+                        primary_condition = condition_details[0]
+                        additional_branches = len(condition_details) - 1
+                        
+                        if additional_branches == 1 and condition_details[1] == "else":
+                            condition_text = f"{primary_condition}-else"
+                        else:
+                            condition_text = f"{primary_condition} (+{additional_branches})"
+                        
+                        consequences.append(('condition', condition_text, str(len(total_sub_consequences)), f'❓ {condition_text}'))
+                    
+                    # If there are meaningful sub-consequences, add them too
+                    if total_sub_consequences:
+                        # Check if we should show sub-consequences directly
+                        has_important_consequences = any(
+                            cons[0] in ['jump', 'call', 'return', 'increase', 'decrease'] 
+                            for cons in total_sub_consequences
+                        )
+                        
+                        if has_important_consequences and len(condition_details) == 1:
+                            # For simple conditions with important consequences, show both
+                            consequences.extend(total_sub_consequences)
                 
                 # Skip visual/audio elements
                 elif isinstance(stmt, (renpy.ast.Say, renpy.ast.Scene, renpy.ast.Show, renpy.ast.Hide, 
@@ -659,8 +732,7 @@ init -998 python:
                 
                 else:
                     class_name = stmt.__class__.__name__
-                    if class_name not in ['Play', 'Stop', 'Queue', 'Music', 'Sound', 'Voice', 'Audio',
-                                        'Comment', 'Translate', 'TranslateBlock', 'EndTranslate']:
+                    if class_name not in ['Play', 'Stop', 'Queue', 'Music', 'Sound', 'Voice', 'Audio', 'Comment', 'Translate', 'TranslateBlock', 'EndTranslate']:
                         for attr in ['target', 'label', 'expression', 'name', 'value']:
                             if hasattr(stmt, attr):
                                 value = getattr(stmt, attr)
@@ -672,11 +744,29 @@ init -998 python:
                 urwmsg("Error processing statement {}: {}".format(i, e))
                 continue
         
-        cache_consequences(choice_block_id, consequences)
-        return consequences
+        # Deduplication that preserves detailed conditions
+        seen_conditions = set()
+        filtered_consequences = []
+        
+        for consequence in consequences:
+            if consequence[0] == 'condition':
+                # Use the full condition text as key to avoid over-deduplication
+                condition_key = consequence[1]  # Use the full condition text
+                if condition_key not in seen_conditions:
+                    seen_conditions.add(condition_key)
+                    filtered_consequences.append(consequence)
+                else:
+                    urwmsg("SKIPPING duplicate condition: {}".format(condition_key))
+            else:
+                filtered_consequences.append(consequence)
+        
+        urwmsg("FINAL CONSEQUENCES: {} (from {} original)".format(len(filtered_consequences), len(consequences)))
+        
+        cache_consequences(choice_block_id, filtered_consequences)
+        return filtered_consequences
 
     def analyze_python_statement_enhanced(stmt):
-        """Python statement analysis using AST parser"""
+        """Enhanced Python statement analysis using AST parser"""
         consequences = []
         
         source = None
@@ -698,7 +788,7 @@ init -998 python:
         return consequences
 
     def parse_python_source_enhanced(source):
-        """Python source parsing with AST"""
+        """Enhanced Python source parsing with better conditional detection"""
         consequences = []
         
         if not source:
@@ -744,17 +834,49 @@ init -998 python:
                                 consequences.append(('decrease', var_name, value, f'{var_name} -= {value}'))
                         except:
                             consequences.append(('modify', var_name, '?', f'{var_name} {op}= ?'))
+                
+                # Detect if statements in Python code
+                elif isinstance(node, ast.If):
+                    try:
+                        # Get condition text
+                        condition_text = "unknown_condition"
+                        if hasattr(ast, 'unparse'):
+                            condition_text = ast.unparse(node.test)
+                        elif hasattr(node.test, 'id'):
+                            condition_text = node.test.id
+                        elif hasattr(node.test, 'attr'):
+                            condition_text = f"*.{node.test.attr}"
+                        
+                        # Clean up common conditions
+                        if 'config.developer' in condition_text:
+                            condition_text = condition_text.replace('config.developer', 'developer_mode')
+                        if '_in_replay' in condition_text:
+                            condition_text = condition_text.replace('_in_replay', 'in_replay')
+                        
+                        # Check for else clause
+                        has_else = node.orelse is not None and len(node.orelse) > 0
+                        has_elif = has_else and any(isinstance(n, ast.If) for n in node.orelse)
+                        
+                        if has_elif:
+                            condition_text += " (+elif)"
+                        elif has_else:
+                            condition_text += "-else"
+                        
+                        consequences.append(('condition', f"if {condition_text}", '1', f'❓ if {condition_text}'))
+                    except:
+                        consequences.append(('condition', 'if condition', '1', '❓ if condition'))
         
-        except (SyntaxError, Exception):
-            pass
+        except (SyntaxError, Exception) as e:
+            urwmsg("AST parsing failed: {}, falling back to regex".format(e))
         
+        # Regex fallback
         regex_consequences = parse_with_regex_fallback(source)
         consequences.extend(regex_consequences)
         
         return consequences
 
     def analyze_bytecode_enhanced(stmt):
-        """Bytecode analysis for compiled games"""
+        """Enhanced bytecode analysis for compiled games"""
         consequences = []
         
         try:
@@ -795,18 +917,57 @@ init -998 python:
         return consequences
 
     def parse_with_regex_fallback(source):
-        """Fallback regex parsing"""
+        """Enhanced fallback regex parsing with conditional detection"""
         consequences = []
         
         code_lines = [line.strip() for line in source.split('\n') if line.strip()]
         
         for line in code_lines:
-            if '+=' in line:
+            # Detect if statements
+            if line.strip().startswith('if ') and ':' in line:
+                try:
+                    condition_part = line.split('if ')[1].split(':')[0].strip()
+                    
+                    # Clean up common conditions
+                    if 'config.developer' in condition_part:
+                        condition_part = condition_part.replace('config.developer', 'developer_mode')
+                    if '_in_replay' in condition_part:
+                        condition_part = condition_part.replace('_in_replay', 'in_replay')
+                    
+                    if len(condition_part) > 30:
+                        condition_part = condition_part[:27] + "..."
+                    
+                    consequences.append(('condition', f'if {condition_part}', '1', f'❓ if {condition_part}'))
+                except:
+                    consequences.append(('condition', 'if condition', '1', '❓ if condition'))
+            
+            # Detect elif statements
+            elif line.strip().startswith('elif ') and ':' in line:
+                try:
+                    condition_part = line.split('elif ')[1].split(':')[0].strip()
+                    
+                    if 'config.developer' in condition_part:
+                        condition_part = condition_part.replace('config.developer', 'developer_mode')
+                    if '_in_replay' in condition_part:
+                        condition_part = condition_part.replace('_in_replay', 'in_replay')
+                    
+                    if len(condition_part) > 30:
+                        condition_part = condition_part[:27] + "..."
+                    
+                    consequences.append(('condition', f'elif {condition_part}', '1', f'❓ elif {condition_part}'))
+                except:
+                    consequences.append(('condition', 'elif condition', '1', '❓ elif condition'))
+            
+            # Detect else statements
+            elif line.strip() == 'else:':
+                consequences.append(('condition', 'else', '1', '❓ else'))
+            
+            elif '+=' in line:
                 try:
                     var_name = line.split('+=')[0].strip()
                     value_part = line.split('+=')[1].strip()
                     clean_var = re.sub(r'\[.*?\]', '', var_name)
-
+    
                     try:
                         if value_part.isdigit():
                             actual_value = value_part
@@ -816,19 +977,19 @@ init -998 python:
                             actual_value = value_part
                         else:
                             actual_value = value_part
-
+    
                         consequences.append(('increase', clean_var, actual_value, line))
                     except:
                         consequences.append(('increase', clean_var, '?', line))
                 except:
                     consequences.append(('code', 'Variable increase', '', line))
-
+    
             elif '-=' in line:
                 try:
                     var_name = line.split('-=')[0].strip()
                     value_part = line.split('-=')[1].strip()
                     clean_var = re.sub(r'\[.*?\]', '', var_name)
-
+    
                     try:
                         if value_part.isdigit():
                             actual_value = value_part
@@ -836,27 +997,27 @@ init -998 python:
                             actual_value = value_part
                         else:
                             actual_value = value_part
-
+    
                         consequences.append(('decrease', clean_var, actual_value, line))
                     except:
                         consequences.append(('decrease', clean_var, '?', line))
                 except:
                     consequences.append(('code', 'Variable decrease', '', line))
-
+    
             elif '=' in line and '==' not in line and '!=' not in line and '<=' not in line and '>=' not in line:
                 if not any(line.strip().startswith(x) for x in ['if ', 'elif ', 'for ', 'while ', 'def ', 'class ', 'import ', 'from ']):
                     try:
                         var_name = line.split('=')[0].strip()
                         value_part = line.split('=', 1)[1].strip()
                         clean_var = re.sub(r'\[.*?\]', '', var_name)
-
+    
                         if not clean_var.startswith('_') and len(clean_var) > 1:
                             if not clean_var.startswith('renpy.pause'):
                                 display_value = value_part[:20] + ('...' if len(value_part) > 20 else '')
                                 consequences.append(('assign', clean_var, display_value, line))
                     except:
                         consequences.append(('code', 'Variable assignment', '', line))
-
+    
             else:
                 if any(keyword in line.lower() for keyword in [' = true', ' = false']):
                     try:
@@ -873,16 +1034,16 @@ init -998 python:
                         'renpy.scene', 'renpy.show', 'renpy.hide', 'renpy.say',
                         'renpy.call_screen', 'renpy.transition', 'renpy.end_replay'
                     ]
-
+    
                     should_ignore = False
                     for ignore_func in ignore_functions:
                         if ignore_func in line:
                             should_ignore = True
                             break
-
+    
                     if not should_ignore:
                         consequences.append(('function', 'Function call', line[:30], line))
-
+    
                 elif len(line) > 3 and not line.startswith('#') and not line.strip().startswith('renpy.'):
                     consequences.append(('code', 'Python code', line[:30], line))
         
@@ -1017,6 +1178,7 @@ init -998 python:
         
         return None
 
+    
     def format_consequences(consequences):
         """Format consequences for display"""
         if not consequences:
@@ -1024,6 +1186,10 @@ init -998 python:
     
         MAX_CONSEQUENCES = persistent.universal_wt_max_consequences
         SHOW_ALL = persistent.universal_wt_show_all_available
+        
+        # Get filter settings
+        filters = persistent.universal_wt_filters
+        name_filters = persistent.universal_wt_name_filters
         
         urwmsg("CONSEQUENCE FORMATTING: MAX_CONSEQUENCES = {}, SHOW_ALL = {}".format(MAX_CONSEQUENCES, SHOW_ALL))
         urwmsg("CONSEQUENCE FORMATTING: Total consequences available = {}".format(len(consequences)))
@@ -1052,7 +1218,7 @@ init -998 python:
             'code': "{font=DejaVuSans.ttf}⚙{/font}"
         }
     
-        # Format all consequences first - NO DUPLICATES
+        # Filter and format consequences
         seen_consequences = set()
         
         for consequence in consequences:
@@ -1065,14 +1231,79 @@ init -998 python:
                 action_type, content = consequence[0], consequence[1]
                 value, full_code = '', ''
     
-            # Create unique identifier for this consequence
+            # FILTER 1: Check if this action type is enabled
+            type_filter_map = {
+                'condition': 'conditions',
+                'jump': 'jumps',
+                'call': 'calls', 
+                'return': 'returns',
+                'increase': 'increases',
+                'decrease': 'decreases',
+                'assign': 'assignments',
+                'boolean': 'booleans',
+                'function': 'functions',
+                'code': 'code',
+                'unknown': 'unknown'
+            }
+            
+            filter_key = type_filter_map.get(action_type, 'unknown')
+            if not filters.get(filter_key, True):
+                urwmsg("FILTERED OUT: {} (type filter disabled)".format(action_type))
+                continue
+    
+            # FILTER 2: Check name-based filters
+            content_str = str(content).lower()
+            should_filter = False
+
+            if name_filters.get('hide_underscore', True) and content_str.startswith('_'):
+                urwmsg("FILTERED OUT: {} (starts with underscore)".format(content))
+                should_filter = True
+            elif name_filters.get('hide_renpy', True) and ('renpy.' in content_str):
+                urwmsg("FILTERED OUT: {} (contains renpy.)".format(content))
+                should_filter = True
+            elif name_filters.get('hide_config', False) and ('config.' in content_str):
+                urwmsg("FILTERED OUT: {} (contains config.)".format(content))
+                should_filter = True
+            elif name_filters.get('hide_store', True) and ('store.' in content_str):
+                urwmsg("FILTERED OUT: {} (contains store.)".format(content))
+                should_filter = True
+
+            # Check custom prefix filters (semicolon-separated auto-parsing)
+            if not should_filter:
+                custom_prefix_str = name_filters.get('custom_prefix', '')
+                if custom_prefix_str:
+                    # Parse semicolon-separated prefixes
+                    prefix_filters = [p.strip().lower() for p in custom_prefix_str.split(';') if p.strip()]
+                    for prefix in prefix_filters:
+                        if content_str.startswith(prefix):
+                            urwmsg("FILTERED OUT: {} (custom prefix filter: '{}')".format(content, prefix))
+                            should_filter = True
+                            break
+
+            # Check custom contains filters (semicolon-separated auto-parsing)
+            if not should_filter:
+                custom_contains_str = name_filters.get('custom_contains', '')
+                if custom_contains_str:
+                    # Parse semicolon-separated contains patterns
+                    contains_filters = [c.strip().lower() for c in custom_contains_str.split(';') if c.strip()]
+                    for contains_text in contains_filters:
+                        if contains_text in content_str:
+                            urwmsg("FILTERED OUT: {} (custom contains filter: '{}')".format(content, contains_text))
+                            should_filter = True
+                            break
+
+            if should_filter:
+                continue
+    
+            # Check for duplicates
             consequence_id = (action_type, str(content), str(value))
             if consequence_id in seen_consequences:
-                continue  # Skip duplicates
+                continue
             seen_consequences.add(consequence_id)
                 
             color = colors.get(action_type, '#fff')
             
+            # Format the consequence based on type
             if action_type == 'increase':
                 if value and value != '1' and value != '?':
                     formatted.append("{color=" + color + "}+" + str(content) + " (+" + str(value) + "){/color}")
@@ -1124,7 +1355,8 @@ init -998 python:
                         
             elif action_type == 'condition':
                 arrow = arrows.get('condition', '?')
-                formatted.append("{color=" + color + "}" + arrow + " Conditional{/color}")
+                condition_text = str(content)
+                formatted.append("{color=" + color + "}" + arrow + " " + condition_text + "{/color}")
                 
             elif action_type == 'code':
                 arrow = arrows.get('code', 'CODE')
@@ -1138,15 +1370,12 @@ init -998 python:
             else:
                 formatted.append("{color=" + color + "}" + str(content)[:20] + "{/color}")
         
-        urwmsg("CONSEQUENCE FORMATTING: Formatted {} unique consequences".format(len(formatted)))
+        urwmsg("CONSEQUENCE FORMATTING: Formatted {} consequences after filtering".format(len(formatted)))
     
-        
         if SHOW_ALL:
-            # Show ALL consequences when enabled, no limits
             final_consequences = formatted
             urwmsg("CONSEQUENCE FORMATTING: Show All enabled - displaying all {} consequences".format(len(final_consequences)))
         else:
-            # Priority-based selection without complex ratios
             high_priority = []
             medium_priority = []
             low_priority = []
@@ -1155,7 +1384,7 @@ init -998 python:
                 item_lower = item.lower()
                 if any(keyword in item_lower for keyword in ['trust', 'love', 'relationship', 'affection', 're_', 'faith', 'points', 'money', 'health', 'reputation', '➤', '📞']):
                     high_priority.append(item)
-                elif any(keyword in item_lower for keyword in ['=', '+', '-', '↩', 'true', 'false', '🔧', '⚙']):
+                elif any(keyword in item_lower for keyword in ['=', '+', '-', '↩', 'true', 'false', '🔧', '⚙', '❓']):
                     medium_priority.append(item)
                 else:
                     low_priority.append(item)
@@ -1163,22 +1392,18 @@ init -998 python:
             urwmsg("CONSEQUENCE FORMATTING: Priority breakdown - High: {}, Medium: {}, Low: {}".format(
                 len(high_priority), len(medium_priority), len(low_priority)))
             
-            # Take consequences in priority order up to the limit
             final_consequences = []
             
-            # Add high priority first
             for item in high_priority:
                 if len(final_consequences) >= MAX_CONSEQUENCES:
                     break
                 final_consequences.append(item)
             
-            # Add medium priority
             for item in medium_priority:
                 if len(final_consequences) >= MAX_CONSEQUENCES:
                     break
                 final_consequences.append(item)
             
-            # Add low priority if still have room
             for item in low_priority:
                 if len(final_consequences) >= MAX_CONSEQUENCES:
                     break
@@ -1187,14 +1412,11 @@ init -998 python:
             urwmsg("CONSEQUENCE FORMATTING: Selected {} out of {} available consequences".format(
                 len(final_consequences), len(formatted)))
         
-        # Create the result with proper error handling
         try:
             result = " | ".join(final_consequences)
             
-            # Show "+X more" indicator only when there are actually more consequences hidden
             if not SHOW_ALL and len(formatted) > len(final_consequences):
                 extra_count = len(formatted) - len(final_consequences)
-                # Use safer string concatenation to avoid markup conflicts
                 more_indicator = " {{color=#888}}{{size=16}} | +{} more{{/size}}{{/color}}".format(extra_count)
                 result = result + more_indicator
                 urwmsg("CONSEQUENCE FORMATTING: Added '+{} more' indicator".format(extra_count))
@@ -1202,7 +1424,6 @@ init -998 python:
             return result
         
         except Exception as e:
-            # FALLBACK: If there's any formatting error, return basic result without "+X more"
             urwmsg("CONSEQUENCE FORMATTING ERROR: {}, returning basic result".format(e))
             try:
                 return " | ".join(final_consequences)
@@ -1216,10 +1437,10 @@ init -998 python:
     original_menu = renpy.exports.menu
     
     def universal_walkthrough_menu_enhanced(items, set_expr=None, args=None, kwargs=None, item_arguments=None, **extra_kwargs):
-        """Enhanced walkthrough menu wrapper with better accuracy"""
+        """walkthrough menu wrapper"""
         global cleanup_counter
         
-        urwmsg("=== KNOX ENHANCED UNIVERSAL WALKTHROUGH MENU v1.2 ===")
+        urwmsg("=== UNIVERSAL WALKTHROUGH MENU v1.4 ===")
         
         cleanup_counter += 1
         if cleanup_counter >= CLEANUP_INTERVAL:
@@ -1233,7 +1454,6 @@ init -998 python:
             return original_menu(items, set_expr, args, kwargs, item_arguments)
     
         try:
-            # Use enhanced menu finding
             menu_node = find_correct_menu_node_enhanced(items)
             
             if menu_node and hasattr(menu_node, 'items'):
@@ -1303,6 +1523,7 @@ init -998 python:
         
         return original_menu(items, set_expr, args, kwargs, item_arguments)
     
+    # Replace the menu function
     renpy.exports.menu = universal_walkthrough_menu_enhanced
 
     def clear_walkthrough_caches():
@@ -1316,14 +1537,14 @@ init -998 python:
             node_strategy_cache.clear()
             
             if dukeconfig.debug: 
-                print("Enhanced walkthrough caches cleared successfully")
+                print("Walkthrough caches cleared successfully")
         except Exception as e:
             if dukeconfig.debug: 
                 print("Error clearing caches: {}".format(e))
 
     def log_memory_usage():
         """Debug function to log memory usage"""
-        if dukeconfig.developer:
+        if dukeconfig.debug:
             print("Menu Registry: {} entries".format(len(menu_registry)))
             print("Consequence Cache: {} entries".format(len(consequence_cache)))
 
@@ -1336,8 +1557,10 @@ init -998 python:
     if not hasattr(persistent, 'universal_walkthrough_enabled'):
         persistent.universal_walkthrough_enabled = True
     
-    print("Universal Ren'Py Walkthrough System v1.2 (Enhanced) Loaded")
+    print("Universal Ren'Py Walkthrough System v1.4 Loaded")
 
+
+## Styles ##
 style wt_toggle_button:
     background "#333"
     hover_background "#555"
@@ -1369,331 +1592,3 @@ transform wt_screen_show:
 transform wt_screen_hide:
     alpha 1.0 yoffset 0
     ease 0.3 alpha 0.0 yoffset -50
-
-screen universal_walkthrough_preferences():
-    modal True
-    zorder 200
-    
-    add "#000" alpha 0.0:
-        at transform:
-            alpha 0.0
-            ease 0.3 alpha 0.8
-    
-    key "game_menu" action Hide("universal_walkthrough_preferences", transition=dissolve)
-    key "K_ESCAPE" action Hide("universal_walkthrough_preferences", transition=dissolve)
-    
-    frame:
-        xalign 0.5
-        yalign 0.5
-        xmaximum 700
-        # ymaximum 500
-        background Frame("#000a", 20, 20)
-        xpadding 40
-        ypadding 30
-        
-        at transform:
-            yoffset -100
-            alpha 0.0
-            ease 0.4 yoffset 0 alpha 1.0
-        
-        vbox:
-            spacing 25
-            xalign 0.5
-            
-            vbox:
-                spacing 10
-                xalign 0.5
-                
-                text "{color=#4a9eff}{size=32}{b}Universal Walkthrough System v1.2{/b}{/size}{/color}":
-                    xalign 0.5
-                    at transform:
-                        alpha 0.0
-                        pause 0.2
-                        ease 0.5 alpha 1.0
-                
-                text "{color=#8cc8ff}{size=18}{i}Enhanced with execution context tracking{/i}{/size}{/color}":
-                    xalign 0.5
-                    at transform:
-                        alpha 0.0
-                        pause 0.4
-                        ease 0.5 alpha 1.0
-                
-                add "#4a9eff" xsize 400 ysize 2 xalign 0.5:
-                    at transform:
-                        xsize 0
-                        pause 0.6
-                        ease 0.8 xsize 400
-            
-            null height 10
-            
-            vbox:
-                spacing 20
-                xalign 0.5
-                
-                hbox:
-                    spacing 15
-                    xalign 0.5
-                    at transform:
-                        alpha 0.0
-                        xoffset -50
-                        pause 0.8
-                        ease 0.4 alpha 1.0 xoffset 0
-                    
-                    text "{color=#fff}{size=20}Enable Walkthrough:{/size}{/color}"
-                    
-                    textbutton (_("ON") if persistent.universal_walkthrough_enabled else _("OFF")):
-                        action ToggleVariable("persistent.universal_walkthrough_enabled")
-                        style "wt_toggle_button"
-                        text_size 18
-                        xsize 80
-                        ysize 35
-                        if persistent.universal_walkthrough_enabled:
-                            background Frame("gui/button/choice_idle_background.png", 10, 10)
-                            text_color "#4a9eff"
-                        else:
-                            background Frame("gui/button/choice_hover_background.png", 10, 10)
-                            text_color "#ff6b6b"
-                        hover_background Frame("gui/button/choice_hover_background.png", 10, 10)
-                        text_hover_color "#fff"
-                        text_xalign 0.5
-                
-                vbox:
-                    spacing 10
-                    xalign 0.5
-                    at transform:
-                        alpha 0.0
-                        xoffset 50
-                        pause 1.0
-                        ease 0.4 alpha 1.0 xoffset 0
-                    
-                    text "{color=#fff}{size=18}Text Size: {color=#4a9eff}{size=22}{b}[persistent.universal_wt_text_size]{/b}{/size}{/color}{/size}":
-                        xalign 0.5
-                    
-                    hbox:
-                        spacing 10
-                        xalign 0.5
-                        
-                        textbutton "−":
-                            action If(persistent.universal_wt_text_size > 12, SetVariable("persistent.universal_wt_text_size", persistent.universal_wt_text_size - 2), None)
-                            style "wt_size_button"
-                            text_size 24
-                            xsize 40
-                            ysize 40
-                            text_xalign 0.5
-                        
-                        frame:
-                            background "#2a2a2a"
-                            xsize 300
-                            ysize 20
-                            yalign 0.5
-                            
-                            bar:
-                                value AnimatedValue(persistent.universal_wt_text_size, 40, delay=0.2, old_value=12)
-                                left_bar Frame("#4a9eff", 5, 5) 
-                                right_bar Frame("#444", 5, 5)
-                                thumb None
-                                xsize 280
-                                ysize 16
-                                xalign 0.5
-                                yalign 0.5
-                        
-                        textbutton "+":
-                            action If(persistent.universal_wt_text_size < 40, SetVariable("persistent.universal_wt_text_size", persistent.universal_wt_text_size + 2), None)
-                            style "wt_size_button"
-                            text_size 24
-                            xsize 40
-                            ysize 40
-                            text_xalign 0.5
-
-                vbox:
-                    spacing 10
-                    xalign 0.5
-                    at transform:
-                        alpha 0.0
-                        xoffset 50
-                        pause 1.2
-                        ease 0.4 alpha 1.0 xoffset 0
-                    
-                    text "{color=#fff}{size=18}Max Consequences: {color=#4a9eff}{size=22}{b}[persistent.universal_wt_max_consequences]{/b}{/size}{/color}{/size}":
-                        xalign 0.5
-                    
-                    hbox:
-                        spacing 10
-                        xalign 0.5
-                        
-                        textbutton "−":
-                            action If(persistent.universal_wt_max_consequences > 1, SetVariable("persistent.universal_wt_max_consequences", persistent.universal_wt_max_consequences - 1), None)
-                            style "wt_size_button"
-                            text_size 24
-                            xsize 40
-                            ysize 40
-                            text_xalign 0.5
-                        
-                        frame:
-                            background "#2a2a2a"
-                            xsize 200
-                            ysize 20
-                            yalign 0.5
-                            
-                            bar:
-                                value AnimatedValue(persistent.universal_wt_max_consequences, 8, delay=0.2, old_value=1)
-                                left_bar Frame("#4a9eff", 5, 5) 
-                                right_bar Frame("#444", 5, 5)
-                                thumb None
-                                xsize 180
-                                ysize 16
-                                xalign 0.5
-                                yalign 0.5
-                        
-                        textbutton "+":
-                            action If(persistent.universal_wt_max_consequences < 8, SetVariable("persistent.universal_wt_max_consequences", persistent.universal_wt_max_consequences + 1), None)
-                            style "wt_size_button"
-                            text_size 24
-                            xsize 40
-                            ysize 40
-                            text_xalign 0.5
-
-
-                vbox:
-                    spacing 10
-                    xalign 0.5
-                    at transform:
-                        alpha 0.0
-                        xoffset -50
-                        pause 1.4
-                        ease 0.4 alpha 1.0 xoffset 0
-                    
-                    hbox:
-                        spacing 15
-                        xalign 0.5
-                        
-                        text "{color=#fff}{size=18}Show All Available:{/size}{/color}"
-                        
-                        textbutton (_("ON") if persistent.universal_wt_show_all_available else _("OFF")):
-                            action ToggleVariable("persistent.universal_wt_show_all_available")
-                            style "wt_toggle_button"
-                            text_size 16
-                            xsize 70
-                            ysize 30
-                            if persistent.universal_wt_show_all_available:
-                                background "#4a9eff"
-                                text_color "#fff"
-                            else:
-                                background "#666"
-                                text_color "#ccc"
-                            hover_background "#6bb8ff"
-                            text_hover_color "#fff"
-                            text_xalign 0.5
-                    
-                    text "{color=#888}{size=12}When enabled, shows all consequences if more than limit available{/size}{/color}":
-                        xalign 0.5
-                        text_align 0.5
-                        xsize 400
-
-                hbox:
-                    spacing 8
-                    xalign 0.5
-                    at transform:
-                        alpha 0.0
-                        pause 1.4
-                        ease 0.4 alpha 1.0
-                    
-                    text "{color=#bbb}{size=14}Quick presets:{/size}{/color}"
-                    
-                    for count in [1, 2, 3, 4, 5]:
-                        textbutton "[count]":
-                            action SetVariable("persistent.universal_wt_max_consequences", count)
-                            style "wt_preset_button"
-                            text_size 14
-                            xsize 25
-                            ysize 25
-                            if persistent.universal_wt_max_consequences == count:
-                                background "#4a9eff"
-                                text_color "#fff"
-                            else:
-                                background "#333"
-                                text_color "#bbb"
-                            hover_background "#6bb8ff"
-                            text_hover_color "#fff"
-                            text_xalign 0.5
-                
-                hbox:
-                    spacing 8
-                    xalign 0.5
-                    at transform:
-                        alpha 0.0
-                        pause 1.2
-                        ease 0.4 alpha 1.0
-                    
-                    text "{color=#bbb}{size=14}Quick sizes:{/size}{/color}"
-                    
-                    for size in [12, 16, 20, 25, 30, 35, 40]:
-                        textbutton "[size]":
-                            action SetVariable("persistent.universal_wt_text_size", size)
-                            style "wt_preset_button"
-                            text_size 14
-                            xsize 35
-                            ysize 25
-                            if persistent.universal_wt_text_size == size:
-                                background "#4a9eff"
-                                text_color "#fff"
-                            else:
-                                background "#333"
-                                text_color "#bbb"
-                            hover_background "#6bb8ff"
-                            text_hover_color "#fff"
-                            text_xalign 0.5
-            
-            if dukeconfig.developer:
-                vbox:
-                    spacing 10
-                    xalign 0.5
-                    at transform:
-                        alpha 0.0
-                        pause 1.4
-                        ease 0.4 alpha 1.0
-                    
-                    text "{color=#ffaa00}{size=16}{b}Debug Information{/b}{/size}{/color}":
-                        xalign 0.5
-                    
-                    text "{color=#ccc}{size=14}Registry: "+ f"{len(menu_registry)} | Cache: {len(consequence_cache)} " + "entries{/size}{/color}":
-                        xalign 0.5
-                    
-                    hbox:
-                        spacing 15
-                        xalign 0.5
-
-                        if not renpy.get_screen("choice"):
-                            textbutton "Clear Cache":
-                                action Function(clear_walkthrough_caches)
-                                style "wt_debug_button"
-                                text_size 14
-                                text_xalign 0.5
-                            
-                        textbutton "Show Memory":
-                            action Function(log_memory_usage)
-                            style "wt_debug_button"
-                            text_size 14
-                            text_xalign 0.5
-            
-            null height 10
-            
-            textbutton "{size=18}Close{/size}":
-                action Hide("universal_walkthrough_preferences", transition=dissolve)
-                style "wt_close_button"
-                xalign 0.5
-                xsize 120
-                ysize 40
-                at transform:
-                    alpha 0.0
-                    pause 1.6
-                    ease 0.4 alpha 1.0
-                text_xalign 0.5
-
-init 999 python:
-    config.underlay.append(
-        renpy.Keymap(
-            alt_K_w = lambda: renpy.run(Show("universal_walkthrough_preferences"))
-        )
-    )
-    

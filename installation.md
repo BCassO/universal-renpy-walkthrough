@@ -3,7 +3,7 @@
 ## Quick Installation (Recommended)
 
 ### Step 1: Download
-- Download [`__urw.rpy`](__urw.rpy) from [releases](../../releases/latest)
+- Download the folder [__urw](__urw) from [releases](../../releases/latest)
 - Save to your Downloads folder
 
 ### Step 2: Find Your Game Folder
@@ -29,7 +29,7 @@ Local: ~/Games/[GameName]/game/
 ```
 
 ### Step 3: Install
-- Copy `__urw.rpy` into the `game/` folder
+- Copy [__urw](__urw) into the `game/` folder
 - The file should be alongside other `.rpy`, `.rpyc`, or `.rpa` files
 
 ### Step 4: Verify Installation
@@ -42,14 +42,13 @@ Local: ~/Games/[GameName]/game/
 
 ### "Alt+W doesn't work"
 **Solutions:**
-- Ensure `__urw.rpy` is in the `game/` folder (not main game folder)
+- Ensure [`_urw.rpy`](__urw/_urw.rpy) & [`_urwdisp`](__urw/_urwdisp.rpy) is in the `game/__urw` folder (not project folder)
 - Restart the game completely
-- File must be named exactly `__urw.rpy` (with double underscores)
 
 ### "No walkthrough hints appear"
 **Debug Steps:**
-1. Open `__urw.rpy` in a text editor (Notepad++, VS Code, etc.)
-2. Find line 38: `debug = False`
+1. Open `_urw.rpy` in a text editor (Notepad++, VS Code, etc.)
+2. Find line 35: `debug = False`
 3. Change to: `debug = True`
 4. Save and restart game
 5. Press **Shift+O** in-game to open console
@@ -58,7 +57,7 @@ Local: ~/Games/[GameName]/game/
 ### "Game crashes after installing"
 **Solutions:**
 - Remove other walkthrough mods (conflicts)
-- Temporarily remove `__urw.rpy` to test
+- Temporarily remove `__urw` folder to test
 - Check if game works without any mods
 
 ### "Wrong consequence information"
@@ -73,28 +72,20 @@ Local: ~/Games/[GameName]/game/
 ## Advanced Options
 
 ### Custom Configuration
-Edit these settings in `__urw.rpy`:
+Edit these settings in `_urw.rpy`:
 ```python
-# Line 38 - Enable debug output
+# Line 35 - Enable debug output
 debug = True
 
-# Default text size (12-40)
 persistent.universal_wt_text_size = 25
 
-# Cache size (50-500)
 MAX_CONSEQUENCE_CACHE = 200
 ```
-
-### For Developers
-**Integration into your Ren'Py project:**
-1. Add `__urw.rpy` to your `game/` folder
-2. No code changes needed - auto-detects menus
-3. Distributable with your game
 
 ## Uninstalling
 
 1. Navigate to `game/` folder
-2. Delete `__urw.rpy`
+2. Delete `__urw` folder
 3. Restart game
 
 **Note:** Save games are not affected.
