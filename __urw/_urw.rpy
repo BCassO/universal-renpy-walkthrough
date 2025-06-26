@@ -40,13 +40,14 @@ init -998 python:
     import builtins
     import re
     import weakref
-    import time
+    import time as _urwtime
 
     node_strategy_cache = {}
 
     def urwmsg(*args, **kwargs):
         if dukeconfig.debug:
             print(*args, **kwargs)
+    
 
     # Ren'Py control exceptions that should NOT be caught
     RENPY_CONTROL_EXCEPTIONS = (
@@ -125,8 +126,8 @@ init -998 python:
                         urwmsg("  renpy.get_filename_line(): {} : {}".format(debug_file, debug_line))
                         if debug_line and debug_line != linenumber:
                             actual_line = debug_line
-                except:
-                    pass
+                except Exception as e:
+                    urwmsg("  Error getting filename_line: {}".format(e))
             
             # Final fallback: scan for the closest menu to our suspected position
             if actual_line != linenumber:
@@ -193,18 +194,43 @@ init -998 python:
                     execution_path.append(current_label)
                     urwmsg("  Found current label: {} at line {}".format(current_label, best_line))
             
+            # FIX v1.4.1: Use alias _urwtime.time() instead of time.time() for better compatibility
+            try:
+                timestamp = _urwtime.time()
+            except Exception as time_error:
+                urwmsg("  Error getting _urwtime.time(): {}, using fallback".format(time_error))
+                # Fallback to a simpler timestamp
+                try:
+                    import datetime
+                    timestamp = datetime.datetime.now().timestamp()
+                except:
+                    timestamp = 0  # Ultimate fallback
+            
             return {
                 'filename': filename,
                 'linenumber': linenumber,
                 'execution_path': tuple(execution_path),
                 'node_id': id(executing_node) if executing_node else None,
                 'current_label': current_label,
-                'timestamp': time.time()
+                'timestamp': timestamp
             }
         except Exception as e:
             urwmsg("Error creating execution context: {}".format(e))
+            # Return a minimal context to prevent total failure
+            try:
+                ctx = renpy.game.context()
+                if ctx and hasattr(ctx, 'current') and ctx.current:
+                    return {
+                        'filename': ctx.current[0] if ctx.current else None,
+                        'linenumber': ctx.current[2] if len(ctx.current) > 2 else 0,
+                        'execution_path': (),
+                        'node_id': None,
+                        'current_label': None,
+                        'timestamp': 0
+                    }
+            except:
+                pass
             return None
-
 
     def create_menu_execution_fingerprint(menu_node, items):
         """Create a comprehensive fingerprint for menu identification"""
@@ -503,7 +529,7 @@ init -998 python:
                 'fingerprint': fingerprint,
                 'execution_context': execution_context
             }
-            menu_registry_access_times[menu_key] = time.time()
+            menu_registry_access_times[menu_key] = _urwtime.time()
             
             urwmsg("Registered menu at {}:{} with fingerprint".format(
                 execution_context['filename'], execution_context['linenumber']))
@@ -536,7 +562,7 @@ init -998 python:
                             not stored_context.get('current_label') or
                             not execution_context.get('current_label')):
                             
-                            menu_registry_access_times[menu_key] = time.time()
+                            menu_registry_access_times[menu_key] = _urwtime.time()
                             urwmsg("Found menu from enhanced registry")
                             return menu_data['node']
             
@@ -1052,7 +1078,7 @@ init -998 python:
     def get_cached_consequences(choice_block_id):
         """Get cached consequences with LRU management"""
         if choice_block_id in consequence_cache:
-            consequence_cache_access[choice_block_id] = time.time()
+            consequence_cache_access[choice_block_id] = _urwtime.time()
             return consequence_cache[choice_block_id]
         return None
 
@@ -1068,7 +1094,7 @@ init -998 python:
                     del consequence_cache_access[old_key]
         
         consequence_cache[choice_block_id] = consequences
-        consequence_cache_access[choice_block_id] = time.time()
+        consequence_cache_access[choice_block_id] = _urwtime.time()
 
     def find_menu_by_proximity_and_text(items):
         """Fallback proximity + text matching logic"""

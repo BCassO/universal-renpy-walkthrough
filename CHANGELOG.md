@@ -2,6 +2,14 @@
 
 All notable changes to the Universal Ren'Py Walkthrough System will be documented in this file.
 
+## [1.4.1 - Critical Fixes] - 2025-06-26
+
+### 🐛 Critical Bug Fixes
+- **Fixed time module explicit conversion error**
+- **Fixed string formatting error in custom filters screen**
+
+---
+
 ## [1.4.0 - Modular Architecture] - 2025-06-25
 
 ### 🏗️ Architecture Overhaul

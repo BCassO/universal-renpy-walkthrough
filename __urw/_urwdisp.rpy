@@ -703,7 +703,7 @@ screen universal_walkthrough_filters():
                                     $ prefix_str = persistent.universal_wt_name_filters.get('custom_prefix', '')
                                     $ parsed_prefixes = [p.strip() for p in prefix_str.split(';') if p.strip()]
                                     
-                                    text "{color=#8cc8ff}{size=12}Active prefix filters ([len(parsed_prefixes)] total):{/size}{/color}":
+                                    text "{color=#8cc8ff}{size=12}Active prefix filters (%s total):{/size}{/color}"%(len(parsed_prefixes)):
                                         xalign 0.5
                                     
                                     # Show up to 3 filters in a line, then wrap
