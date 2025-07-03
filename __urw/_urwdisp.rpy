@@ -1,4 +1,4 @@
-####          Universal Walkthrough System v1.4            ####
+####          Universal Walkthrough System v1.5            ####
 ####             (C) Knox Emberlyn 2025                    ####
 
 # This file is part of the Universal Walkthrough System for Ren'Py created by Knox Emberlyn.
@@ -57,6 +57,7 @@ screen custom_prefix_input():
                 text "{color=#4a9eff}{size=11}mc_; girl_; internal_{/size}{/color}":
                     xalign 0.5
             
+            # Live preview of parsed filters
             if persistent.universal_wt_name_filters.get('custom_prefix', ''):
                 vbox:
                     spacing 5
@@ -67,7 +68,7 @@ screen custom_prefix_input():
                     text "{color=#8cc8ff}{size=12}Preview (%s filters):{/size}{/color}"%(len(preview_prefixes)):
                         xalign 0.5
                     
-                    for prefix in preview_prefixes[:5]:
+                    for prefix in preview_prefixes[:5]:  # Show max 5 in preview
                         text "{color=#fff}{size=10}• Will hide variables starting with '{b}[prefix]{/b}'{/size}{/color}":
                             xalign 0.5
                     
@@ -114,7 +115,6 @@ screen custom_prefix_input():
                     text_color "#fff"
                     text_size 14
                     text_xalign 0.5
-
 
 #########################################################################################
 
@@ -169,6 +169,7 @@ screen custom_contains_input():
                 
                 text "{color=#4a9eff}{size=11}internal; test; temp{/size}{/color}":
                     xalign 0.5
+            
             
             if persistent.universal_wt_name_filters.get('custom_contains', ''):
                 vbox:
@@ -228,7 +229,6 @@ screen custom_contains_input():
                     text_size 14
                     text_xalign 0.5
 
-
 #########################################################################################
 
 screen universal_walkthrough_filters():
@@ -261,6 +261,7 @@ screen universal_walkthrough_filters():
             spacing 20
             xalign 0.5
             
+            # Header
             vbox:
                 spacing 10
                 xalign 0.5
@@ -285,6 +286,7 @@ screen universal_walkthrough_filters():
                         xsize 0
                         pause 0.6
                         ease 0.8 xsize 500
+            
             
             viewport:
                 scrollbars "vertical"
@@ -673,6 +675,7 @@ screen universal_walkthrough_filters():
                                 text "{color=#fff}{size=14}Hide variables starting with:{/size}{/color}":
                                     yalign 0.5
                                 
+                                # Toggle for custom prefix filter
                                 textbutton (_("ON") if persistent.universal_wt_name_filters.get('custom_prefix', '') else _("OFF")):
                                     action [
                                         If(persistent.universal_wt_name_filters.get('custom_prefix', ''),
@@ -1081,14 +1084,14 @@ screen universal_walkthrough_preferences():
                 spacing 10
                 xalign 0.5
                 
-                text "{color=#4a9eff}{size=32}{b}Universal Walkthrough System v1.4{/b}{/size}{/color}":
+                text "{color=#4a9eff}{size=32}{b}Universal Walkthrough System v1.5{/b}{/size}{/color}":
                     xalign 0.5
                     at transform:
                         alpha 0.0
                         pause 0.2
                         ease 0.5 alpha 1.0
                 
-                text "{color=#8cc8ff}{size=18}{i}Enhanced with execution context tracking{/i}{/size}{/color}":
+                text "{color=#8cc8ff}{size=18}{i}Enhance your gaming experience{/i}{/size}{/color}":
                     xalign 0.5
                     at transform:
                         alpha 0.0

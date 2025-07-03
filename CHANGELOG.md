@@ -2,6 +2,17 @@
 
 All notable changes to the Universal Ren'Py Walkthrough System will be documented in this file.
 
+## [1.5.0] - 2025-07-03
+
+### 🚀 Major Enhancements
+- **Flexible consequence formatting**
+- **Case-immune custom text tags:** Universal walkthrough now uses its own text tags
+
+### 🐛 Bug Fixes & Stability
+- **Fixed ast module import error**
+
+---
+
 ## [1.4.1 - Critical Fixes] - 2025-06-26
 
 ### 🐛 Critical Bug Fixes

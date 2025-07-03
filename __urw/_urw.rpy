@@ -1,7 +1,7 @@
-####          Universal Walkthrough System v1.4            ####
+####          Universal Walkthrough System v1.5            ####
 ####             (C) Knox Emberlyn 2025                    ####
 
-# This file is part of the Universal Walkthrough System for Ren'Py created by Knox Emberlyn.
+# This file is part of the Universal Walkthrough System for Ren'Py created by Knox Emberlyn., working checkpoint
 
 init -999:
     define persistent.universal_wt_filters = {
@@ -32,7 +32,7 @@ init -999:
     define persistent.universal_wt_show_all_available = True
 
 init -999 python in dukeconfig:
-    debug = False
+    debug = False  # Set to True to enable debug messages
     developer = True
 
 init -998 python:
@@ -194,17 +194,15 @@ init -998 python:
                     execution_path.append(current_label)
                     urwmsg("  Found current label: {} at line {}".format(current_label, best_line))
             
-            # FIX v1.4.1: Use alias _urwtime.time() instead of time.time() for better compatibility
             try:
                 timestamp = _urwtime.time()
             except Exception as time_error:
                 urwmsg("  Error getting _urwtime.time(): {}, using fallback".format(time_error))
-                # Fallback to a simpler timestamp
                 try:
                     import datetime
                     timestamp = datetime.datetime.now().timestamp()
                 except:
-                    timestamp = 0  # Ultimate fallback
+                    timestamp = 0
             
             return {
                 'filename': filename,
@@ -342,7 +340,7 @@ init -998 python:
                             clean_menu = re.sub(r'\{[^}]*\}', '', menu_text).strip()
                             urwmsg("    [{}]: '{}' (clean: '{}')".format(j, menu_text, clean_menu))
             
-            # ENHANCED: Filter candidates with flexible item count matching
+            # Filter candidates with flexible item count matching
             candidates = []
             for node in all_menus:
                 if hasattr(node, 'items') and len(node.items) > 0:
@@ -587,7 +585,7 @@ init -998 python:
     def find_correct_menu_node_enhanced(items):
         """Enhanced menu finding function with multiple strategies"""
         try:
-            urwmsg("=== KNOX MENU DETECTION v1.4 ===")
+            urwmsg("=== KNOX MENU DETECTION v1.5 ===")
             
             # Get current execution context
             execution_context = get_execution_context_signature()
@@ -792,7 +790,7 @@ init -998 python:
         return filtered_consequences
 
     def analyze_python_statement_enhanced(stmt):
-        """Enhanced Python statement analysis using AST parser"""
+        """Python statement analysis using AST parser"""
         consequences = []
         
         source = None
@@ -821,6 +819,7 @@ init -998 python:
             return consequences
         
         try:
+            import ast
             tree = ast.parse(source)
             
             for node in ast.walk(tree):
@@ -902,7 +901,7 @@ init -998 python:
         return consequences
 
     def analyze_bytecode_enhanced(stmt):
-        """Enhanced bytecode analysis for compiled games"""
+        """Bytecode analysis for compiled games"""
         consequences = []
         
         try:
@@ -1204,8 +1203,16 @@ init -998 python:
         
         return None
 
+    def escape_renpy_formatting(text):
+        """Escape Ren'Py formatting characters in text to prevent interpretation"""
+        import re
+        def double_brackets(match):
+            return match.group(0) * 2
+        
+        # Double up brackets and braces to escape them
+        return re.sub(r'\{+|\[+', double_brackets, text)
     
-    def format_consequences(consequences):
+    def format_consequences_urw(consequences):
         """Format consequences for display"""
         if not consequences:
             return ""
@@ -1221,27 +1228,14 @@ init -998 python:
         urwmsg("CONSEQUENCE FORMATTING: Total consequences available = {}".format(len(consequences)))
         
         formatted = []
-        colors = {
-            'increase': '#4f4',
-            'decrease': '#f44',
-            'assign': '#44f',
-            'boolean': '#4af',
-            'jump': '#f84',
-            'call': '#8f4',
-            'return': '#f48',
-            'function': '#af4',
-            'condition': '#ff8',
-            'code': '#ccc',
-            'unknown': '#f8f'
-        }
         
         arrows = {
-            'jump': "{font=DejaVuSans.ttf}➤{/font}",
-            'call': "{font=TwemojiCOLRv0.ttf}📞{/font}",
-            'return': "{font=DejaVuSans.ttf}↩{/font}",
-            'function': "{font=TwemojiCOLRv0.ttf}🔧{/font}",
-            'condition': "{font=TwemojiCOLRv0.ttf}❓{/font}",
-            'code': "{font=DejaVuSans.ttf}⚙{/font}"
+            'jump': "➤",
+            'call': "📞",
+            'return': "↩",
+            'function': "🔧",
+            'condition': "❓",
+            'code': "⚙"
         }
     
         # Filter and format consequences
@@ -1280,7 +1274,7 @@ init -998 python:
             # FILTER 2: Check name-based filters
             content_str = str(content).lower()
             should_filter = False
-
+    
             if name_filters.get('hide_underscore', True) and content_str.startswith('_'):
                 urwmsg("FILTERED OUT: {} (starts with underscore)".format(content))
                 should_filter = True
@@ -1293,7 +1287,7 @@ init -998 python:
             elif name_filters.get('hide_store', True) and ('store.' in content_str):
                 urwmsg("FILTERED OUT: {} (contains store.)".format(content))
                 should_filter = True
-
+    
             # Check custom prefix filters (semicolon-separated auto-parsing)
             if not should_filter:
                 custom_prefix_str = name_filters.get('custom_prefix', '')
@@ -1305,7 +1299,7 @@ init -998 python:
                             urwmsg("FILTERED OUT: {} (custom prefix filter: '{}')".format(content, prefix))
                             should_filter = True
                             break
-
+    
             # Check custom contains filters (semicolon-separated auto-parsing)
             if not should_filter:
                 custom_contains_str = name_filters.get('custom_contains', '')
@@ -1317,7 +1311,7 @@ init -998 python:
                             urwmsg("FILTERED OUT: {} (custom contains filter: '{}')".format(content, contains_text))
                             should_filter = True
                             break
-
+    
             if should_filter:
                 continue
     
@@ -1327,74 +1321,89 @@ init -998 python:
                 continue
             seen_consequences.add(consequence_id)
                 
-            color = colors.get(action_type, '#fff')
-            
-            # Format the consequence based on type
+            # Format the consequence based on type - WITH ESCAPING
             if action_type == 'increase':
                 if value and value != '1' and value != '?':
-                    formatted.append("{color=" + color + "}+" + str(content) + " (+" + str(value) + "){/color}")
+                    formatted.append("+{} (+{})".format(escape_renpy_formatting(str(content)), escape_renpy_formatting(str(value))))
                 else:
-                    formatted.append("{color=" + color + "}+" + str(content) + "{/color}")
+                    formatted.append("+{}".format(escape_renpy_formatting(str(content))))
                     
             elif action_type == 'decrease':
+                content_escaped = escape_renpy_formatting(str(content))
+                value_escaped = escape_renpy_formatting(str(value))
                 if value and value != '1' and value != '?':
-                    formatted.append("{color=" + color + "}-" + str(content) + " (-" + str(value) + "){/color}")
+                    formatted.append("-{} (-{})".format(content_escaped, value_escaped))
                 else:
-                    formatted.append("{color=" + color + "}-" + str(content) + "{/color}")
+                    formatted.append("-{}".format(content_escaped))
                     
             elif action_type == 'assign':
+                content_escaped = escape_renpy_formatting(str(content))
+                value_escaped = escape_renpy_formatting(str(value))
                 if len(str(value)) > 15:
-                    formatted.append("{color=" + color + "}" + str(content) + " = " + str(value)[:12] + "...{/color}")
+                    formatted.append("{} = {}...".format(content_escaped, str(value_escaped)[:12]))
                 else:
-                    formatted.append("{color=" + color + "}" + str(content) + " = " + str(value) + "{/color}")
+                    formatted.append("{} = {}".format(content_escaped, value_escaped))
                     
             elif action_type == 'boolean':
-                formatted.append("{color=" + color + "}" + str(content) + " = " + str(value) + "{/color}")
+                content_escaped = escape_renpy_formatting(str(content))
+                value_escaped = escape_renpy_formatting(str(value))
+                formatted.append("{} = {}".format(content_escaped, value_escaped))
                 
             elif action_type == 'jump':
+                content_escaped = escape_renpy_formatting(str(content))
                 arrow = arrows.get('jump', '>')
-                formatted.append("{color=" + color + "}" + arrow + " " + str(content) + "{/color}")
+                formatted.append("{} {}".format(arrow, content_escaped))
                 
             elif action_type == 'call':
+                content_escaped = escape_renpy_formatting(str(content))
                 arrow = arrows.get('call', 'CALL')
-                formatted.append("{color=" + color + "}" + arrow + " " + str(content) + "{/color}")
+                formatted.append("{} {}".format(arrow, content_escaped))
                 
             elif action_type == 'return':
+                value = escape_renpy_formatting(str(value))
                 arrow = arrows.get('return', '<-')
                 if value and str(value) != 'end':
-                    formatted.append("{color=" + color + "}" + arrow + " " + str(value) + "{/color}")
+                    formatted.append("{} {}".format(arrow, value))
                 else:
-                    formatted.append("{color=" + color + "}" + arrow + " End{/color}")
+                    formatted.append("{} End".format(arrow))
                     
             elif action_type == 'function':
                 arrow = arrows.get('function', 'FN')
                 if full_code and len(full_code) <= 30:
-                    formatted.append("{color=" + color + "}" + arrow + " " + str(full_code) + "{/color}")
+                    full_code_escaped = escape_renpy_formatting(str(full_code))
+                    formatted.append("{} {}".format(arrow, full_code_escaped))
                 elif value and len(str(value)) <= 25:
-                    formatted.append("{color=" + color + "}" + arrow + " " + str(value) + "{/color}")
+                    value_escaped = escape_renpy_formatting(str(value))
+                    formatted.append("{} {}".format(arrow, value_escaped))
                 else:
                     try:
                         decrypted_code = renpy.python.quote_eval(full_code) if full_code else value
-                        formatted.append("{color=" + color + "}" + arrow + " " + str(decrypted_code) + "{/color}")
+                        decrypted_escaped = escape_renpy_formatting(str(decrypted_code))
+                        formatted.append("{} {}" .format(arrow, decrypted_escaped))
                     except:
-                        formatted.append("{color=" + color + "}" + arrow + " Code{/color}")
+                        # formatted.append("{color=" + color + "}" + arrow + " Code{/color}")
+                        formatted.append("{} {}".format(arrow, "Code"))
+
                         
             elif action_type == 'condition':
+                condition_escaped = escape_renpy_formatting(str(content))
                 arrow = arrows.get('condition', '?')
-                condition_text = str(content)
-                formatted.append("{color=" + color + "}" + arrow + " " + condition_text + "{/color}")
+                formatted.append("{} {}".format(arrow, condition_escaped))
                 
             elif action_type == 'code':
                 arrow = arrows.get('code', 'CODE')
                 if full_code and len(full_code) <= 25:
-                    formatted.append("{color=" + color + "}" + arrow + " " + str(full_code) + "{/color}")
+                    full_code_escaped = escape_renpy_formatting(str(full_code))
+                    formatted.append("{} {}".format(arrow, full_code_escaped))
                 elif value and len(str(value)) <= 20:
-                    formatted.append("{color=" + color + "}" + arrow + " " + str(value) + "{/color}")
+                    value_escaped = escape_renpy_formatting(str(value))
+                    formatted.append("{} {}".format(arrow, value_escaped))
                 else:
-                    formatted.append("{color=" + color + "}" + arrow + " Code{/color}")
+                    formatted.append("{} Code".format(arrow))
                     
             else:
-                formatted.append("{color=" + color + "}" + str(content)[:20] + "{/color}")
+                content_escaped = escape_renpy_formatting(str(content)[:20])
+                formatted.append("{}".format(str(content_escaped)))
         
         urwmsg("CONSEQUENCE FORMATTING: Formatted {} consequences after filtering".format(len(formatted)))
     
@@ -1441,10 +1450,10 @@ init -998 python:
         try:
             result = " | ".join(final_consequences)
             
+            # Add "more" indicator as plain text - URW will style it
             if not SHOW_ALL and len(formatted) > len(final_consequences):
                 extra_count = len(formatted) - len(final_consequences)
-                more_indicator = " {{color=#888}}{{size=16}} | +{} more{{/size}}{{/color}}".format(extra_count)
-                result = result + more_indicator
+                result = result + " | +{} more".format(extra_count)
                 urwmsg("CONSEQUENCE FORMATTING: Added '+{} more' indicator".format(extra_count))
             
             return result
@@ -1460,13 +1469,185 @@ init -998 python:
     cleanup_counter = 0
     CLEANUP_INTERVAL = 100
 
+    class URWText(renpy.Displayable):
+        """
+        URW text displayable with coloring
+        """
+        def __init__(self, text, size=25, color="#888", prefix="WT: ", **kwargs):
+            super(URWText, self).__init__(**kwargs)
+            self.text = text
+            self.size = size
+            self.base_color = color
+            self.prefix = prefix
+            
+            # Text processing with coloring
+            full_text = self.create_enhanced_text(text, size, color, prefix)
+            self.child = renpy.text.text.Text(full_text, 
+                                            outlines=[(2, "#000", 0, 0)],  # Add black outline
+                                            font="DejaVuSans.ttf",
+                                            **kwargs)
+        
+        def create_enhanced_text(self, text, size, base_color, prefix):
+            """Create enhanced text with coloring for different consequence types"""
+            
+            # Color mapping for different consequence types
+            colors = {
+                'increase': '#4f4',      # Green for increases (+)
+                'decrease': '#f44',      # Red for decreases (-)
+                'assign': '#44f',        # Blue for assignments (=)
+                'jump': '#f84',          # Orange for jumps (➤)
+                'call': '#8f4',          # Light green for calls (📞)
+                'return': '#f48',        # Pink for returns (↩)
+                'condition': '#ff8',     # Yellow for conditions (❓)
+                'function': '#af4',      # Light blue for functions (🔧)
+                'code': '#ccc',          # Gray for code (⚙)
+                'more': '#aaa'           # Lighter gray for "more" indicator
+            }
+            
+            # Start with size and prefix in base color
+            result = "{{size={}}}{{color={}}}{}{{/color}}".format(size, base_color, prefix)
+            
+            # Split text by | to process each consequence separately
+            parts = text.split(' | ')
+            
+            for i, part in enumerate(parts):
+                if i > 0:
+                    result += " | "  # Simple separator without color tags
+                
+                part_color = base_color  # Default color
+                
+                # Determine color based on content
+                if part.startswith('+'):
+                    part_color = colors['increase']
+                elif part.startswith('-') and not part.startswith('-{') and 'more' not in part:
+                    part_color = colors['decrease']
+                elif '=' in part and '==' not in part:
+                    part_color = colors['assign']
+                elif part.startswith('➤'):
+                    part_color = colors['jump']
+                elif part.startswith('📞'):
+                    part_color = colors['call']
+                elif part.startswith('↩'):
+                    part_color = colors['return']
+                elif part.startswith('❓'):
+                    part_color = colors['condition']
+                elif part.startswith('🔧'):
+                    part_color = colors['function']
+                elif part.startswith('⚙'):
+                    part_color = colors['code']
+                elif 'more' in part and '+' in part:
+                    part_color = colors['more']
+                
+                # Add colored part
+                result += "{{color={}}}{}{{/color}}".format(part_color, part)
+            
+            
+            return result
+        
+        def render(self, width, height, st, at):
+            return self.child.render(width, height, st, at)
+        
+        def visit(self):
+            return [self.child]
+    
+    def urw_tag_handler(tag, argument, contents):
+        """
+        URW text tag with coloring
+        Usage: {urw=size:25,color:#888,prefix:WT: }consequences{/urw}
+        """
+        new_list = []
+        
+        # Parse arguments (handle both lowercase and uppercase)
+        size = 25
+        color = "#888"
+        prefix = "WT: "
+        
+        if argument:
+            # Convert argument to lowercase for parsing to handle case transformations
+            args = argument.lower().split(',')
+            for arg in args:
+                arg = arg.strip()
+                if arg.startswith('size:'):
+                    try:
+                        size = int(arg.split(':')[1])
+                    except:
+                        size = 25
+                elif arg.startswith('color:'):
+                    color = arg.split(':', 1)[1]
+                elif arg.startswith('prefix:'):
+                    prefix = arg.split(':', 1)[1]
+        
+        # Combine all text content
+        full_text = ""
+        for kind, text in contents:
+            if kind == renpy.TEXT_TEXT:
+                full_text += text
+        
+        if full_text:
+            # Create enhanced URW displayable with coloring
+            urw_displayable = URWText(full_text, size, color, prefix)
+            new_list.append((renpy.TEXT_DISPLAYABLE, urw_displayable))
+        
+        return new_list
+
+    def register_transformation_immune_tag(tag_name, handler_function):
+        """
+        URW utility to register a custom text tag that's immune to case transformations
+        
+        Args:
+            tag_name (str): Base tag name (e.g., "urw")
+            handler_function: The tag handler function
+        
+        Returns:
+            list: All registered tag variations
+        """
+        if not tag_name or not callable(handler_function):
+            urwmsg("ERROR: Invalid parameters for tag registration")
+            return []
+        
+        registered_variants = []
+        tag_name = tag_name.lower()  # Normalize to lowercase
+        
+        try:
+            # Generate all case combinations using bit manipulation
+            # For n characters, we have 2^n combinations
+            total_combinations = 2 ** len(tag_name)
+            
+            for i in range(total_combinations):
+                variant = ""
+                for char_index, char in enumerate(tag_name):
+                    # Use bit at position char_index to determine case
+                    if (i >> char_index) & 1:
+                        variant += char.upper()
+                    else:
+                        variant += char.lower()
+                
+                # Register the variant
+                config.custom_text_tags[variant] = handler_function
+                registered_variants.append(variant)
+            
+            urwmsg("✓ Successfully registered {} case-immune variants for tag '{}'".format(
+                len(registered_variants), tag_name))
+            
+            if dukeconfig.debug:
+                urwmsg("  Registered variants: {}".format(", ".join(registered_variants)))
+            
+            return registered_variants
+            
+        except Exception as e:
+            urwmsg("ERROR registering transformation-immune tag '{}': {}".format(tag_name, e))
+            return []
+
+    # Register URW tag variants
+    urw_variants = register_transformation_immune_tag("urw", urw_tag_handler)
+
     original_menu = renpy.exports.menu
     
     def universal_walkthrough_menu_enhanced(items, set_expr=None, args=None, kwargs=None, item_arguments=None, **extra_kwargs):
         """walkthrough menu wrapper"""
         global cleanup_counter
         
-        urwmsg("=== UNIVERSAL WALKTHROUGH MENU v1.4 ===")
+        urwmsg("=== UNIVERSAL WALKTHROUGH MENU v1.5 ===")
         
         cleanup_counter += 1
         if cleanup_counter >= CLEANUP_INTERVAL:
@@ -1522,11 +1703,15 @@ init -998 python:
                             consequences = extract_choice_consequences(choice_block)
                             
                             if consequences:
-                                formatted_consequences = format_consequences(consequences)
-                                enhanced_caption += "\n{{size={}}}{{color=#888}}WT:{{/color}} ".format(
-                                    persistent.universal_wt_text_size if hasattr(persistent, 'universal_wt_text_size') else 25
-                                ) + formatted_consequences + "{/size}"
-                                urwmsg("Added consequences to choice '{}': {}".format(caption_text, formatted_consequences))
+                                # Use URW-safe formatting that doesn't rely on Ren'Py color tags
+                                formatted_consequences = format_consequences_urw(consequences)
+                                wt_size = persistent.universal_wt_text_size if hasattr(persistent, 'universal_wt_text_size') else 25
+                                
+                                # Put EVERYTHING inside the URW tag - this protects the entire walkthrough
+                                enhanced_caption += "\n{{urw=size:{},color:#888,prefix:WT: }}{}{{/urw}}".format(
+                                    wt_size, formatted_consequences
+                                )
+                                urwmsg("Added URW-protected consequences to choice '{}': {}".format(caption_text, formatted_consequences))
                             else:
                                 urwmsg("No consequences found for choice '{}'".format(caption_text))
                         else:
@@ -1583,7 +1768,7 @@ init -998 python:
     if not hasattr(persistent, 'universal_walkthrough_enabled'):
         persistent.universal_walkthrough_enabled = True
     
-    print("Universal Ren'Py Walkthrough System v1.4 Loaded")
+    print("Universal Ren'Py Walkthrough System v1.5 Loaded for Game: {}-v{}".format(config.name, config.version))
 
 
 ## Styles ##
