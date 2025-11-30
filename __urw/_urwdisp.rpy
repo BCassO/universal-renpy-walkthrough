@@ -1,4 +1,4 @@
-####          Universal Walkthrough System v1.5            ####
+####          Universal Walkthrough System v1.6            ####
 ####             (C) Knox Emberlyn 2025                    ####
 
 # This file is part of the Universal Walkthrough System for Ren'Py created by Knox Emberlyn.
@@ -322,7 +322,7 @@ screen universal_walkthrough_filters():
                             # Row 1
                             hbox:
                                 spacing 8
-                                textbutton "❓":
+                                textbutton "?":
                                     action ToggleDict(persistent.universal_wt_filters, 'conditions')
                                     style "wt_toggle_button"
                                     text_outlines [ ( 0, "#000", 0, 0) ]
@@ -362,7 +362,7 @@ screen universal_walkthrough_filters():
                             
                             hbox:
                                 spacing 8
-                                textbutton "🔧":
+                                textbutton "FN":
                                     action ToggleDict(persistent.universal_wt_filters, 'functions')
                                     style "wt_toggle_button"
                                     text_outlines [ ( 0, "#000", 0, 0) ]
@@ -383,7 +383,7 @@ screen universal_walkthrough_filters():
                             # Row 2
                             hbox:
                                 spacing 8
-                                textbutton "🦘":
+                                textbutton ">>":
                                     action ToggleDict(persistent.universal_wt_filters, 'jumps')
                                     style "wt_toggle_button"
                                     text_outlines [ ( 0, "#000", 0, 0) ]
@@ -423,7 +423,7 @@ screen universal_walkthrough_filters():
                             
                             hbox:
                                 spacing 8
-                                textbutton "⚙":
+                                textbutton "CODE":
                                     action ToggleDict(persistent.universal_wt_filters, 'code')
                                     style "wt_toggle_button"
                                     text_outlines [ ( 0, "#000", 0, 0) ]
@@ -444,7 +444,7 @@ screen universal_walkthrough_filters():
                             # Row 3
                             hbox:
                                 spacing 8
-                                textbutton "📞":
+                                textbutton "CALL":
                                     action ToggleDict(persistent.universal_wt_filters, 'calls')
                                     style "wt_toggle_button"
                                     text_outlines [ ( 0, "#000", 0, 0) ]
@@ -487,7 +487,7 @@ screen universal_walkthrough_filters():
                             # Row 4
                             hbox:
                                 spacing 8
-                                textbutton "↩":
+                                textbutton "<-":
                                     action ToggleDict(persistent.universal_wt_filters, 'returns')
                                     style "wt_toggle_button"
                                     text_outlines [ ( 0, "#000", 0, 0) ]
@@ -527,7 +527,7 @@ screen universal_walkthrough_filters():
                             
                             hbox:
                                 spacing 8
-                                textbutton "?":
+                                textbutton "??":
                                     action ToggleDict(persistent.universal_wt_filters, 'unknown')
                                     style "wt_toggle_button"
                                     text_outlines [ ( 0, "#000", 0, 0) ]
@@ -1084,7 +1084,7 @@ screen universal_walkthrough_preferences():
                 spacing 10
                 xalign 0.5
                 
-                text "{color=#4a9eff}{size=32}{b}Universal Walkthrough System v1.5{/b}{/size}{/color}":
+                text "{color=#4a9eff}{size=32}{b}Universal Walkthrough System v1.6{/b}{/size}{/color}":
                     xalign 0.5
                     at transform:
                         alpha 0.0

@@ -29,8 +29,7 @@ Local: ~/Games/[GameName]/game/
 ```
 
 ### Step 3: Install
-- Copy [__urw](__urw) into the `game/` folder
-- The file should be alongside other `.rpy`, `.rpyc`, or `.rpa` files
+- Copy the entire [__urw](__urw) folder into the `game/` directory so the structure looks like `game/__urw/_urw.rpy` and `game/__urw/_urwdisp.rpy` together. Keeping them grouped this way is recommended, though not strictly required.
 
 ### Step 4: Verify Installation
 1. **Launch your game**
@@ -42,7 +41,7 @@ Local: ~/Games/[GameName]/game/
 
 ### "Alt+W doesn't work"
 **Solutions:**
-- Ensure [`_urw.rpy`](__urw/_urw.rpy) & [`_urwdisp`](__urw/_urwdisp.rpy) is in the `game/__urw` folder (not project folder)
+- Keep both [`_urw.rpy`](__urw/_urw.rpy) and [`_urwdisp.rpy`](__urw/_urwdisp.rpy) together inside `game/__urw/` when possible so the walkthrough files stay in one place even if you could spread them elsewhere
 - Restart the game completely
 
 ### "No walkthrough hints appear"

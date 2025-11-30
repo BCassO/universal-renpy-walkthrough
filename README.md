@@ -18,9 +18,9 @@ A universal walkthrough mod that automatically shows choice consequences for **A
 
 ## 🚀 Quick Start
 
-1. **Download:** Get [`__urw.rpy`](__urw.rpy) from [releases](../../releases/latest)
-2. **Install:** Drop it in your game's `game/` folder
-3. **Play:** Press `Alt+W` in-game for settings
+1. **Download:** Grab the latest [`__urw` folder](__urw) from [releases](../../releases/latest). It contains both `_urw.rpy` and `_urwdisp.rpy` which work together.
+2. **Install:** Copy the `__urw` folder into your game's `game/` directory so that `game/__urw/_urw.rpy` and `game/__urw/_urwdisp.rpy` exist together; this keeps the walkthrough scripts organized, but you can place them elsewhere if needed.
+3. **Play:** Launch the game and press `Alt+W` in-game for settings
 
 📖 **Need help?** See the [detailed installation guide](installation.md)
 
@@ -74,7 +74,7 @@ Help us expand this list! [Report compatibility](../../issues/new?template=compa
 ## 🐛 Troubleshooting
 
 **Quick fixes:**
-- Ensure `__urw.rpy` is in the `game/` folder (not main folder)
+- Keep both [`_urw.rpy`](__urw/_urw.rpy) and [`_urwdisp.rpy`](__urw/_urwdisp.rpy) together inside `game/__urw/` when possible so the walkthrough files stay in one place even if you could drop them elsewhere.
 - Press `Alt+W` to check if mod loaded
 - Enable debug mode in the file if issues persist
 

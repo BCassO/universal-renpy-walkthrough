@@ -1,4 +1,4 @@
-####          Universal Walkthrough System v1.5            ####
+####          Universal Walkthrough System v1.6            ####
 ####             (C) Knox Emberlyn 2025                    ####
 
 # This file is part of the Universal Walkthrough System for Ren'Py created by Knox Emberlyn., working checkpoint
@@ -585,7 +585,7 @@ init -998 python:
     def find_correct_menu_node_enhanced(items):
         """Enhanced menu finding function with multiple strategies"""
         try:
-            urwmsg("=== KNOX MENU DETECTION v1.5 ===")
+            urwmsg("=== KNOX MENU DETECTION v1.6 ===")
             
             # Get current execution context
             execution_context = get_execution_context_signature()
@@ -1230,12 +1230,12 @@ init -998 python:
         formatted = []
         
         arrows = {
-            'jump': "➤",
-            'call': "📞",
-            'return': "↩",
-            'function': "🔧",
-            'condition': "❓",
-            'code': "⚙"
+            'jump': ">>",
+            'call': "CALL",
+            'return': "<-",
+            'function': "FN",
+            'condition': "?",
+            'code': "CODE"
         }
     
         # Filter and format consequences
@@ -1647,7 +1647,7 @@ init -998 python:
         """walkthrough menu wrapper"""
         global cleanup_counter
         
-        urwmsg("=== UNIVERSAL WALKTHROUGH MENU v1.5 ===")
+        urwmsg("=== UNIVERSAL WALKTHROUGH MENU v1.6 ===")
         
         cleanup_counter += 1
         if cleanup_counter >= CLEANUP_INTERVAL:
@@ -1768,7 +1768,7 @@ init -998 python:
     if not hasattr(persistent, 'universal_walkthrough_enabled'):
         persistent.universal_walkthrough_enabled = True
     
-    print("Universal Ren'Py Walkthrough System v1.5 Loaded for Game: {}-v{}".format(config.name, config.version))
+    print("Universal Ren'Py Walkthrough System v1.6 Loaded for Game: {}-v{}".format(config.name, config.version))
 
 
 ## Styles ##

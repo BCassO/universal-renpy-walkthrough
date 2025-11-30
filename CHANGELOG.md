@@ -2,6 +2,13 @@
 
 All notable changes to the Universal Ren'Py Walkthrough System will be documented in this file.
 
+## [1.6.0] - 2025-11-30
+
+### 🎨 Compatibility Update
+- **Text-based consequence indicators** replaced the previous icon-only labels (jump, call, return, etc.) so the walkthrough renders cleanly everywhere, especially where emoji or custom glyphs might be missing.
+
+---
+
 ## [1.5.0] - 2025-07-03
 
 ### 🚀 Major Enhancements
