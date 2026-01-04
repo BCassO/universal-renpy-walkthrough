@@ -3,6 +3,7 @@
 [![Ren'Py](https://img.shields.io/badge/Ren'Py-8.x.x-blue)](https://www.renpy.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/BCassO/universal-renpy-walkthrough)](../../releases/latest)
+[![Dev Build](https://img.shields.io/badge/Dev%20Build-Latest-orange?style=flat)](../../tree/dev)
 
 A universal walkthrough mod that automatically shows choice consequences for **ANY** Ren'Py game - no manual setup required! Now with enhanced AST analysis, intelligent menu detection, real-time variable tracking, and modern UI features.
 
@@ -17,7 +18,9 @@ A universal walkthrough mod that automatically shows choice consequences for **A
 
 ## 🚀 Quick Start
 
-1. **Download:** Grab the latest [`__urw` folder](__urw) from [releases](../../releases/latest). Contains all urw modules.
+1. **Download:** Grab the latest [`__urw` folder](__urw) from [releases](../../releases/latest). Contains all v2.0 modules.
+   - **Stable Release:** Use the latest [release version](../../releases/latest)
+   - **Latest Dev Build:** Check the [dev branch](../../tree/dev) for the newest features and improvements
 2. **Install:** Copy the `__urw` folder into your game's `game/` directory. This keeps all walkthrough scripts organized in one place.
 3. **Play:** Launch the game and press `Alt+W` to access the full walkthrough dashboard with settings, statistics, and more!
 

@@ -1144,7 +1144,6 @@ screen URW_debug():
 ##################################################################
 
 screen URW_full_viewer():
-    """Full consequence viewer for current menu choices"""
     tag menu
     modal True
     zorder 200
