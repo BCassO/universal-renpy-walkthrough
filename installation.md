@@ -29,7 +29,22 @@ Local: ~/Games/[GameName]/game/
 ```
 
 ### Step 3: Install
-- Copy the entire [__urw](__urw) folder into the `game/` directory so the structure looks like `game/__urw/_urw.rpy` and `game/__urw/_urwdisp.rpy` together. Keeping them grouped this way is recommended, though not strictly required.
+- Copy the entire [__urw](__urw) folder into the `game/` directory. The folder contains 4 modular files that work together:
+  - `urw_core.rpy` - Core analysis engine
+  - `urw_processor.rpy` - Menu detection and variable tracking
+  - `urw_screens.rpy` - Dashboard UI and display
+  - `urw_utils.rpy` - Utility functions and helpers
+
+The directory structure should look like:
+```
+game/__urw/
+├── urw_core.rpy
+├── urw_processor.rpy
+├── urw_screens.rpy
+└── urw_utils.rpy
+```
+
+Keeping all 4 files together in the `__urw/` folder is essential for proper functionality.
 
 ### Step 4: Verify Installation
 1. **Launch your game**
@@ -41,14 +56,14 @@ Local: ~/Games/[GameName]/game/
 
 ### "Alt+W doesn't work"
 **Solutions:**
-- Keep both [`_urw.rpy`](__urw/_urw.rpy) and [`_urwdisp.rpy`](__urw/_urwdisp.rpy) together inside `game/__urw/` when possible so the walkthrough files stay in one place even if you could spread them elsewhere
+- Ensure all 4 files (`urw_core.rpy`, `urw_processor.rpy`, `urw_screens.rpy`, `urw_utils.rpy`) are in the `game/__urw/` folder together
 - Restart the game completely
 
 ### "No walkthrough hints appear"
 **Debug Steps:**
-1. Open `_urw.rpy` in a text editor (Notepad++, VS Code, etc.)
-2. Find line 35: `debug = False`
-3. Change to: `debug = True`
+1. Open `urw_core.rpy` in a text editor (Notepad++, VS Code, etc.)
+2. Find `DEBUG = False` in the URWConfig section
+3. Change to: `DEBUG = True`
 4. Save and restart game
 5. Press **Shift+O** in-game to open console
 6. Check for error messages
@@ -71,14 +86,18 @@ Local: ~/Games/[GameName]/game/
 ## Advanced Options
 
 ### Custom Configuration
-Edit these settings in `_urw.rpy`:
+Edit these settings in `urw_core.rpy`:
 ```python
-# Line 35 - Enable debug output
-debug = True
+# In URWConfig class
+DEBUG = True                          # Enable debug output
+VERSION = "2.0.0"
 
+# Cache settings
+MAX_MENU_CACHE = 500
+MAX_CONSEQUENCE_CACHE = 300
+
+# Display settings
 persistent.universal_wt_text_size = 25
-
-MAX_CONSEQUENCE_CACHE = 200
 ```
 
 ## Uninstalling
