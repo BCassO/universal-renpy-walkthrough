@@ -1,6 +1,6 @@
 # Universal Ren'Py Walkthrough System
 
-[![Ren'Py](https://img.shields.io/badge/Ren'Py-8.x.x-blue)](https://www.renpy.org/)
+[![Ren'Py](https://img.shields.io/badge/Ren'Py-8.5.1-blue)](https://www.renpy.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/BCassO/universal-renpy-walkthrough)](../../releases/latest)
 [![Dev Build](https://img.shields.io/badge/Dev%20Build-Latest-orange?style=flat)](../../tree/dev)

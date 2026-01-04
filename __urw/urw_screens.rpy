@@ -4,6 +4,33 @@
 ####                 User Interface & Screens                   ####
 ####################################################################
 
+init python:
+    def _urw_calc_responsive():
+        """Calculate responsive UI sizes based on current screen resolution"""
+        base_width = config.screen_width
+        base_height = config.screen_height
+        
+        # Reference resolution (1920x1080)
+        ref_width = 1920
+        ref_height = 1080
+        
+        scale_x = base_width / ref_width
+        scale_y = base_height / ref_height
+        avg_scale = (scale_x + scale_y) / 2
+        
+        return {
+            'scale_x': scale_x,
+            'scale_y': scale_y,
+            'avg_scale': avg_scale,
+            'width': base_width,
+            'height': base_height,
+        }
+    
+    def urw_dim(reference_size):
+        """Convert reference dimension (based on 1920x1080) to current screen size"""
+        dims = _urw_calc_responsive()
+        return int(reference_size * dims['avg_scale'])
+
 ##################################################################
 #                URW MAIN PREFERENCES SCREEN                     #
 ##################################################################
@@ -24,11 +51,11 @@ screen URW_preferences():
     frame:
         xalign 0.5
         yalign 0.5
-        xmaximum 800
-        ymaximum 700
+        xmaximum int(800 * _urw_calc_responsive()['avg_scale'])
+        ymaximum int(700 * _urw_calc_responsive()['avg_scale'])
         background Frame("#1a1a2e", 20, 20)
-        xpadding 40
-        ypadding 30
+        xpadding int(40 * _urw_calc_responsive()['avg_scale'])
+        ypadding int(30 * _urw_calc_responsive()['avg_scale'])
         
         at transform:
             yoffset -80
@@ -36,16 +63,16 @@ screen URW_preferences():
             ease 0.4 yoffset 0 alpha 1.0
         
         vbox:
-            spacing 20
+            spacing int(20 * _urw_calc_responsive()['avg_scale'])
             xalign 0.5
             
             # Header
             vbox:
-                spacing 8
+                spacing int(8 * _urw_calc_responsive()['avg_scale'])
                 xalign 0.5
                 
                 hbox:
-                    spacing 15
+                    spacing int(15 * _urw_calc_responsive()['avg_scale'])
                     xalign 0.5
                     
                     text "{color=#4fc3f7}{size=32}{b}URW 2.0{/b}{/size}{/color}":
@@ -68,41 +95,41 @@ screen URW_preferences():
                     at transform:
                         xsize 0
                         pause 0.3
-                        ease 0.6 xsize 400
+                        ease 0.6 xsize int(400 * _urw_calc_responsive()['avg_scale'])
             
-            null height 10
+            null height int(10 * _urw_calc_responsive()['avg_scale'])
             
             viewport:
                 scrollbars "vertical"
                 mousewheel True
-                xsize 720
-                ysize 480
+                xsize int(720 * _urw_calc_responsive()['avg_scale'])
+                ysize int(480 * _urw_calc_responsive()['avg_scale'])
                 
                 vbox:
-                    spacing 25
-                    xsize 700
+                    spacing int(25 * _urw_calc_responsive()['avg_scale'])
+                    xsize int(700 * _urw_calc_responsive()['avg_scale'])
                     
                     frame:
                         background Frame("#16213e", 15, 15)
                         xfill True
-                        padding (25, 20)
+                        padding (int(25 * _urw_calc_responsive()['avg_scale']), int(20 * _urw_calc_responsive()['avg_scale']))
                         
                         at URW_slide_in_left
                         
                         hbox:
-                            spacing 30
+                            spacing int(30 * _urw_calc_responsive()['avg_scale'])
                             xalign 0.5
                             
                             vbox:
-                                spacing 5
+                                spacing int(5 * _urw_calc_responsive()['avg_scale'])
                                 text "{color=#fff}{size=20}{b}Enable Walkthrough{/b}{/size}{/color}"
                                 text "{color=#888}{size=12}Toggle walkthrough hints on/off{/size}{/color}"
                             
                             textbutton (_("ENABLED") if persistent.urw_enabled else _("DISABLED")):
                                 action ToggleVariable("persistent.urw_enabled")
-                                xsize 140
-                                ysize 45
-                                text_size 16
+                                xsize int(140 * _urw_calc_responsive()['avg_scale'])
+                                ysize int(45 * _urw_calc_responsive()['avg_scale'])
+                                text_size int(16 * _urw_calc_responsive()['avg_scale'])
                                 text_xalign 0.5
                                 if persistent.urw_enabled:
                                     background Frame("#4CAF50", 8, 8)
@@ -116,7 +143,7 @@ screen URW_preferences():
                     frame:
                         background Frame("#16213e", 15, 15)
                         xfill True
-                        padding (25, 20)
+                        padding (int(25 * _urw_calc_responsive()['avg_scale']), int(20 * _urw_calc_responsive()['avg_scale']))
                         
                         at transform:
                             alpha 0.0
@@ -125,36 +152,36 @@ screen URW_preferences():
                             ease 0.4 alpha 1.0 xoffset 0
                         
                         vbox:
-                            spacing 20
+                            spacing int(20 * _urw_calc_responsive()['avg_scale'])
                             
                             text "{color=#4fc3f7}{size=18}{b}📐 Display Settings{/b}{/size}{/color}"
                             
                             vbox:
-                                spacing 10
+                                spacing int(10 * _urw_calc_responsive()['avg_scale'])
                                 
                                 hbox:
-                                    spacing 15
+                                    spacing int(15 * _urw_calc_responsive()['avg_scale'])
                                     
                                     text "{color=#fff}{size=16}Text Size:{/size}{/color}"
                                     text "{color=#4fc3f7}{size=18}{b}[persistent.urw_text_size]{/b}{/size}{/color}"
                                 
                                 hbox:
-                                    spacing 10
+                                    spacing int(10 * _urw_calc_responsive()['avg_scale'])
                                     xalign 0.5
                                     
                                     textbutton "−":
                                         action If(persistent.urw_text_size > 12, 
                                                 SetVariable("persistent.urw_text_size", persistent.urw_text_size - 2))
                                         style "URW_size_button"
-                                        text_size 24
-                                        xsize 40
-                                        ysize 40
+                                        text_size int(24 * _urw_calc_responsive()['avg_scale'])
+                                        xsize int(40 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(40 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                     
                                     bar:
                                         value VariableValue("persistent.urw_text_size", range=40, style="URW_slider")
-                                        xsize 350
-                                        ysize 20
+                                        xsize int(350 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(20 * _urw_calc_responsive()['avg_scale'])
                                         left_bar Frame("#4fc3f7", 5, 5)
                                         right_bar Frame("#333", 5, 5)
                                         thumb None
@@ -163,13 +190,13 @@ screen URW_preferences():
                                         action If(persistent.urw_text_size < 40, 
                                                 SetVariable("persistent.urw_text_size", persistent.urw_text_size + 2))
                                         style "URW_size_button"
-                                        text_size 24
-                                        xsize 40
-                                        ysize 40
+                                        text_size int(24 * _urw_calc_responsive()['avg_scale'])
+                                        xsize int(40 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(40 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                 
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     xalign 0.5
                                     
                                     text "{color=#888}{size=12}Quick:{/size}{/color}":
@@ -178,9 +205,9 @@ screen URW_preferences():
                                     for size in [14, 18, 22, 25, 30, 35]:
                                         textbutton "[size]":
                                             action SetVariable("persistent.urw_text_size", size)
-                                            xsize 40
-                                            ysize 28
-                                            text_size 12
+                                            xsize int(40 * _urw_calc_responsive()['avg_scale'])
+                                            ysize int(28 * _urw_calc_responsive()['avg_scale'])
+                                            text_size int(12 * _urw_calc_responsive()['avg_scale'])
                                             text_xalign 0.5
                                             if persistent.urw_text_size == size:
                                                 background Frame("#4fc3f7", 5, 5)
@@ -191,31 +218,31 @@ screen URW_preferences():
                                             hover_background Frame("#5fd3f7", 5, 5)
                             
                             vbox:
-                                spacing 10
+                                spacing int(10 * _urw_calc_responsive()['avg_scale'])
                                 
                                 hbox:
-                                    spacing 15
+                                    spacing int(15 * _urw_calc_responsive()['avg_scale'])
                                     
                                     text "{color=#fff}{size=16}Max Consequences:{/size}{/color}"
                                     text "{color=#4fc3f7}{size=18}{b}[persistent.urw_max_consequences]{/b}{/size}{/color}"
                                 
                                 hbox:
-                                    spacing 10
+                                    spacing int(10 * _urw_calc_responsive()['avg_scale'])
                                     xalign 0.5
                                     
                                     textbutton "−":
                                         action If(persistent.urw_max_consequences > 1, 
                                                 SetVariable("persistent.urw_max_consequences", persistent.urw_max_consequences - 1))
                                         style "URW_size_button"
-                                        text_size 24
-                                        xsize 40
-                                        ysize 40
+                                        text_size int(24 * _urw_calc_responsive()['avg_scale'])
+                                        xsize int(40 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(40 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                     
                                     bar:
                                         value VariableValue("persistent.urw_max_consequences", range=10, style="URW_slider")
-                                        xsize 250
-                                        ysize 20
+                                        xsize int(250 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(20 * _urw_calc_responsive()['avg_scale'])
                                         left_bar Frame("#4fc3f7", 5, 5)
                                         right_bar Frame("#333", 5, 5)
                                         thumb None
@@ -224,13 +251,13 @@ screen URW_preferences():
                                         action If(persistent.urw_max_consequences < 10, 
                                                 SetVariable("persistent.urw_max_consequences", persistent.urw_max_consequences + 1))
                                         style "URW_size_button"
-                                        text_size 24
-                                        xsize 40
-                                        ysize 40
+                                        text_size int(24 * _urw_calc_responsive()['avg_scale'])
+                                        xsize int(40 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(40 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                 
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     xalign 0.5
                                     
                                     text "{color=#888}{size=12}Quick:{/size}{/color}":
@@ -239,9 +266,9 @@ screen URW_preferences():
                                     for count in [1, 2, 3, 5, 8, 10]:
                                         textbutton "[count]":
                                             action SetVariable("persistent.urw_max_consequences", count)
-                                            xsize 35
-                                            ysize 28
-                                            text_size 12
+                                            xsize int(35 * _urw_calc_responsive()['avg_scale'])
+                                            ysize int(28 * _urw_calc_responsive()['avg_scale'])
+                                            text_size int(12 * _urw_calc_responsive()['avg_scale'])
                                             text_xalign 0.5
                                             if persistent.urw_max_consequences == count:
                                                 background Frame("#4fc3f7", 5, 5)
@@ -253,19 +280,19 @@ screen URW_preferences():
                             
                             # Show All Toggle
                             hbox:
-                                spacing 20
+                                spacing int(20 * _urw_calc_responsive()['avg_scale'])
                                 xalign 0.5
                                 
                                 vbox:
-                                    spacing 3
+                                    spacing int(3 * _urw_calc_responsive()['avg_scale'])
                                     text "{color=#fff}{size=16}Show All Consequences:{/size}{/color}"
                                     text "{color=#888}{size=11}When enabled, ignores max limit{/size}{/color}"
                                 
                                 textbutton (_("ON") if persistent.urw_show_all else _("OFF")):
                                     action ToggleVariable("persistent.urw_show_all")
-                                    xsize 70
-                                    ysize 35
-                                    text_size 14
+                                    xsize int(70 * _urw_calc_responsive()['avg_scale'])
+                                    ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                                     text_xalign 0.5
                                     if persistent.urw_show_all:
                                         background Frame("#4fc3f7", 5, 5)
@@ -277,19 +304,19 @@ screen URW_preferences():
                             
                             # Full Text Toggle
                             hbox:
-                                spacing 20
+                                spacing int(20 * _urw_calc_responsive()['avg_scale'])
                                 xalign 0.5
                                 
                                 vbox:
-                                    spacing 3
+                                    spacing int(3 * _urw_calc_responsive()['avg_scale'])
                                     text "{color=#fff}{size=16}Full Text Display:{/size}{/color}"
                                     text "{color=#888}{size=11}Show complete text without truncation{/size}{/color}"
                                 
                                 textbutton (_("ON") if persistent.urw_full_text else _("OFF")):
                                     action ToggleVariable("persistent.urw_full_text")
-                                    xsize 70
-                                    ysize 35
-                                    text_size 14
+                                    xsize int(70 * _urw_calc_responsive()['avg_scale'])
+                                    ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                                     text_xalign 0.5
                                     if persistent.urw_full_text:
                                         background Frame("#4fc3f7", 5, 5)
@@ -370,9 +397,9 @@ screen URW_preferences():
                                 
                                 textbutton "🔧 Filters":
                                     action Show("URW_filters", transition=dissolve)
-                                    xsize 130
-                                    ysize 45
-                                    text_size 14
+                                    xsize int(130 * _urw_calc_responsive()['avg_scale'])
+                                    ysize int(45 * _urw_calc_responsive()['avg_scale'])
+                                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                                     text_xalign 0.5
                                     background Frame("#2196F3", 8, 8)
                                     hover_background Frame("#42A5F5", 8, 8)
@@ -380,9 +407,9 @@ screen URW_preferences():
                                 
                                 textbutton "📊 Stats":
                                     action Show("URW_stats_screen", transition=dissolve)
-                                    xsize 120
-                                    ysize 45
-                                    text_size 14
+                                    xsize int(120 * _urw_calc_responsive()['avg_scale'])
+                                    ysize int(45 * _urw_calc_responsive()['avg_scale'])
+                                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                                     text_xalign 0.5
                                     background Frame("#9C27B0", 8, 8)
                                     hover_background Frame("#AB47BC", 8, 8)
@@ -390,9 +417,9 @@ screen URW_preferences():
                                 
                                 textbutton "📋 Full Viewer":
                                     action Show("URW_full_viewer", transition=dissolve)
-                                    xsize 150
-                                    ysize 45
-                                    text_size 14
+                                    xsize int(150 * _urw_calc_responsive()['avg_scale'])
+                                    ysize int(45 * _urw_calc_responsive()['avg_scale'])
+                                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                                     text_xalign 0.5
                                     background Frame("#00BCD4", 8, 8)
                                     hover_background Frame("#26C6DA", 8, 8)
@@ -401,9 +428,9 @@ screen URW_preferences():
                                 if urw_config.DEVELOPER:
                                     textbutton "🔍 Debug":
                                         action Show("URW_debug", transition=dissolve)
-                                        xsize 120
-                                        ysize 45
-                                        text_size 14
+                                        xsize int(120 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(45 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(14 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         background Frame("#FF5722", 8, 8)
                                         hover_background Frame("#FF7043", 8, 8)
@@ -411,7 +438,7 @@ screen URW_preferences():
             
             # Footer
             hbox:
-                spacing 20
+                spacing int(20 * _urw_calc_responsive()['avg_scale'])
                 xalign 0.5
                 
                 at transform:
@@ -421,9 +448,9 @@ screen URW_preferences():
                 
                 textbutton "Close":
                     action Hide("URW_preferences", transition=dissolve)
-                    xsize 120
-                    ysize 45
-                    text_size 16
+                    xsize int(120 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(45 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(16 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background Frame("#4fc3f7", 8, 8)
                     hover_background Frame("#5fd3f7", 8, 8)
@@ -437,9 +464,9 @@ screen URW_preferences():
                         SetVariable("persistent.urw_full_text", False),
                         SetVariable("persistent.urw_theme", "modern"),
                     ]
-                    xsize 120
-                    ysize 45
-                    text_size 16
+                    xsize int(120 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(45 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(16 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background Frame("#f44336", 8, 8)
                     hover_background Frame("#ef5350", 8, 8)
@@ -465,11 +492,11 @@ screen URW_filters():
     frame:
         xalign 0.5
         yalign 0.5
-        xmaximum 850
-        ymaximum 650
+        xmaximum int(850 * _urw_calc_responsive()['avg_scale'])
+        ymaximum int(650 * _urw_calc_responsive()['avg_scale'])
         background Frame("#1a1a2e", 20, 20)
-        xpadding 35
-        ypadding 25
+        xpadding int(35 * _urw_calc_responsive()['avg_scale'])
+        ypadding int(25 * _urw_calc_responsive()['avg_scale'])
         
         at transform:
             yoffset -60
@@ -477,11 +504,11 @@ screen URW_filters():
             ease 0.4 yoffset 0 alpha 1.0
         
         vbox:
-            spacing 20
+            spacing int(20 * _urw_calc_responsive()['avg_scale'])
             xalign 0.5
             
             vbox:
-                spacing 8
+                spacing int(8 * _urw_calc_responsive()['avg_scale'])
                 xalign 0.5
                 
                 text "{color=#4fc3f7}{size=28}{b}Filter Settings{/b}{/size}{/color}":
@@ -490,41 +517,41 @@ screen URW_filters():
                 text "{color=#888}{size=14}Customize which consequences are displayed{/size}{/color}":
                     xalign 0.5
                 
-                add "#4fc3f7" xsize 300 ysize 2 xalign 0.5
+                add "#4fc3f7" xsize int(300 * _urw_calc_responsive()['avg_scale']) ysize 2 xalign 0.5
             
             viewport:
                 scrollbars "vertical"
                 mousewheel True
-                xsize 780
-                ysize 450
+                xsize int(780 * _urw_calc_responsive()['avg_scale'])
+                ysize int(450 * _urw_calc_responsive()['avg_scale'])
                 
                 vbox:
-                    spacing 25
-                    xsize 760
+                    spacing int(25 * _urw_calc_responsive()['avg_scale'])
+                    xsize int(760 * _urw_calc_responsive()['avg_scale'])
                     
                     # Type Filters
                     frame:
                         background Frame("#16213e", 12, 12)
                         xfill True
-                        padding (20, 15)
+                        padding (int(20 * _urw_calc_responsive()['avg_scale']), int(15 * _urw_calc_responsive()['avg_scale']))
                         
                         vbox:
-                            spacing 15
+                            spacing int(15 * _urw_calc_responsive()['avg_scale'])
                             
                             text "{color=#fff}{size=18}{b}Consequence Types{/b}{/size}{/color}"
                             
                             grid 3 3:
-                                spacing 15
+                                spacing int(15 * _urw_calc_responsive()['avg_scale'])
                                 xalign 0.5
                                 
                                 # Variables
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton "±":
                                         action ToggleDict(persistent.urw_filters, 'variables')
-                                        xsize 35
-                                        ysize 35
-                                        text_size 18
+                                        xsize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(18 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_filters.get('variables', True):
                                             background "#4CAF50"
@@ -538,12 +565,12 @@ screen URW_filters():
                                 
                                 # Conditions
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton "?":
                                         action ToggleDict(persistent.urw_filters, 'conditions')
-                                        xsize 35
-                                        ysize 35
-                                        text_size 18
+                                        xsize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(18 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_filters.get('conditions', True):
                                             background "#FFEB3B"
@@ -557,12 +584,12 @@ screen URW_filters():
                                 
                                 # Flow
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton "→":
                                         action ToggleDict(persistent.urw_filters, 'flow')
-                                        xsize 35
-                                        ysize 35
-                                        text_size 18
+                                        xsize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(18 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_filters.get('flow', True):
                                             background "#FF9800"
@@ -576,12 +603,12 @@ screen URW_filters():
                                 
                                 # Functions
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton "ƒ":
                                         action ToggleDict(persistent.urw_filters, 'functions')
-                                        xsize 35
-                                        ysize 35
-                                        text_size 18
+                                        xsize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(18 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_filters.get('functions', True):
                                             background "#9C27B0"
@@ -595,12 +622,12 @@ screen URW_filters():
                                 
                                 # Flags
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton "◆":
                                         action ToggleDict(persistent.urw_filters, 'flags')
-                                        xsize 35
-                                        ysize 35
-                                        text_size 18
+                                        xsize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(18 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_filters.get('flags', True):
                                             background "#00BCD4"
@@ -614,12 +641,12 @@ screen URW_filters():
                                 
                                 # Relationships
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton "♥":
                                         action ToggleDict(persistent.urw_filters, 'relationships')
-                                        xsize 35
-                                        ysize 35
-                                        text_size 18
+                                        xsize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(18 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_filters.get('relationships', True):
                                             background "#E91E63"
@@ -633,12 +660,12 @@ screen URW_filters():
                                 
                                 # Stats
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton "★":
                                         action ToggleDict(persistent.urw_filters, 'stats')
-                                        xsize 35
-                                        ysize 35
-                                        text_size 18
+                                        xsize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(18 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_filters.get('stats', True):
                                             background "#FF5722"
@@ -652,12 +679,12 @@ screen URW_filters():
                                 
                                 # Unknown
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton "?":
                                         action ToggleDict(persistent.urw_filters, 'unknown')
-                                        xsize 35
-                                        ysize 35
-                                        text_size 18
+                                        xsize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(18 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_filters.get('unknown', False):
                                             background "#607D8B"
@@ -675,25 +702,25 @@ screen URW_filters():
                     frame:
                         background Frame("#16213e", 12, 12)
                         xfill True
-                        padding (20, 15)
+                        padding (int(20 * _urw_calc_responsive()['avg_scale']), int(15 * _urw_calc_responsive()['avg_scale']))
                         
                         vbox:
-                            spacing 15
+                            spacing int(15 * _urw_calc_responsive()['avg_scale'])
                             
                             text "{color=#fff}{size=18}{b}Name-based Filters{/b}{/size}{/color}"
                             
                             grid 2 3:
-                                spacing 20
+                                spacing int(20 * _urw_calc_responsive()['avg_scale'])
                                 xalign 0.5
                                 
                                 # Hide underscore
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton (_("ON") if persistent.urw_name_filters.get('hide_underscore', True) else _("OFF")):
                                         action ToggleDict(persistent.urw_name_filters, 'hide_underscore')
-                                        xsize 55
-                                        ysize 30
-                                        text_size 12
+                                        xsize int(55 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(30 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(12 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_name_filters.get('hide_underscore', True):
                                             background "#4fc3f7"
@@ -707,12 +734,12 @@ screen URW_filters():
                                 
                                 # Hide renpy
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton (_("ON") if persistent.urw_name_filters.get('hide_renpy', True) else _("OFF")):
                                         action ToggleDict(persistent.urw_name_filters, 'hide_renpy')
-                                        xsize 55
-                                        ysize 30
-                                        text_size 12
+                                        xsize int(55 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(30 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(12 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_name_filters.get('hide_renpy', True):
                                             background "#4fc3f7"
@@ -726,12 +753,12 @@ screen URW_filters():
                                 
                                 # Hide config
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton (_("ON") if persistent.urw_name_filters.get('hide_config', False) else _("OFF")):
                                         action ToggleDict(persistent.urw_name_filters, 'hide_config')
-                                        xsize 55
-                                        ysize 30
-                                        text_size 12
+                                        xsize int(55 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(30 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(12 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_name_filters.get('hide_config', False):
                                             background "#4fc3f7"
@@ -745,12 +772,12 @@ screen URW_filters():
                                 
                                 # Hide store
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton (_("ON") if persistent.urw_name_filters.get('hide_store', True) else _("OFF")):
                                         action ToggleDict(persistent.urw_name_filters, 'hide_store')
-                                        xsize 55
-                                        ysize 30
-                                        text_size 12
+                                        xsize int(55 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(30 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(12 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_name_filters.get('hide_store', True):
                                             background "#4fc3f7"
@@ -764,12 +791,12 @@ screen URW_filters():
                                 
                                 # Hide internal
                                 hbox:
-                                    spacing 8
+                                    spacing int(8 * _urw_calc_responsive()['avg_scale'])
                                     textbutton (_("ON") if persistent.urw_name_filters.get('hide_internal', True) else _("OFF")):
                                         action ToggleDict(persistent.urw_name_filters, 'hide_internal')
-                                        xsize 55
-                                        ysize 30
-                                        text_size 12
+                                        xsize int(55 * _urw_calc_responsive()['avg_scale'])
+                                        ysize int(30 * _urw_calc_responsive()['avg_scale'])
+                                        text_size int(12 * _urw_calc_responsive()['avg_scale'])
                                         text_xalign 0.5
                                         if persistent.urw_name_filters.get('hide_internal', True):
                                             background "#4fc3f7"
@@ -787,15 +814,15 @@ screen URW_filters():
                     frame:
                         background Frame("#16213e", 12, 12)
                         xfill True
-                        padding (20, 15)
+                        padding (int(20 * _urw_calc_responsive()['avg_scale']), int(15 * _urw_calc_responsive()['avg_scale']))
                         
                         vbox:
-                            spacing 15
+                            spacing int(15 * _urw_calc_responsive()['avg_scale'])
                             
                             text "{color=#fff}{size=18}{b}Quick Presets{/b}{/size}{/color}"
                             
                             hbox:
-                                spacing 15
+                                spacing int(15 * _urw_calc_responsive()['avg_scale'])
                                 xalign 0.5
                                 
                                 textbutton "Show All":
@@ -809,9 +836,9 @@ screen URW_filters():
                                         SetDict(persistent.urw_filters, 'stats', True),
                                         SetDict(persistent.urw_filters, 'unknown', True),
                                     ]
-                                    xsize 120
-                                    ysize 40
-                                    text_size 14
+                                    xsize int(120 * _urw_calc_responsive()['avg_scale'])
+                                    ysize int(40 * _urw_calc_responsive()['avg_scale'])
+                                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                                     text_xalign 0.5
                                     background "#4CAF50"
                                     hover_background "#66BB6A"
@@ -828,9 +855,9 @@ screen URW_filters():
                                         SetDict(persistent.urw_filters, 'stats', True),
                                         SetDict(persistent.urw_filters, 'unknown', False),
                                     ]
-                                    xsize 140
-                                    ysize 40
-                                    text_size 14
+                                    xsize int(140 * _urw_calc_responsive()['avg_scale'])
+                                    ysize int(40 * _urw_calc_responsive()['avg_scale'])
+                                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                                     text_xalign 0.5
                                     background "#2196F3"
                                     hover_background "#42A5F5"
@@ -847,9 +874,9 @@ screen URW_filters():
                                         SetDict(persistent.urw_filters, 'stats', False),
                                         SetDict(persistent.urw_filters, 'unknown', False),
                                     ]
-                                    xsize 140
-                                    ysize 40
-                                    text_size 14
+                                    xsize int(140 * _urw_calc_responsive()['avg_scale'])
+                                    ysize int(40 * _urw_calc_responsive()['avg_scale'])
+                                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                                     text_xalign 0.5
                                     background "#E91E63"
                                     hover_background "#F06292"
@@ -866,9 +893,9 @@ screen URW_filters():
                                         SetDict(persistent.urw_filters, 'stats', True),
                                         SetDict(persistent.urw_filters, 'unknown', False),
                                     ]
-                                    xsize 100
-                                    ysize 40
-                                    text_size 14
+                                    xsize int(100 * _urw_calc_responsive()['avg_scale'])
+                                    ysize int(40 * _urw_calc_responsive()['avg_scale'])
+                                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                                     text_xalign 0.5
                                     background "#607D8B"
                                     hover_background "#90A4AE"
@@ -876,14 +903,14 @@ screen URW_filters():
             
             # Footer
             hbox:
-                spacing 20
+                spacing int(20 * _urw_calc_responsive()['avg_scale'])
                 xalign 0.5
                 
                 textbutton "← Back":
                     action Hide("URW_filters", transition=dissolve)
-                    xsize 100
-                    ysize 40
-                    text_size 14
+                    xsize int(100 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(40 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background "#455a64"
                     hover_background "#607D8B"
@@ -905,9 +932,9 @@ screen URW_filters():
                         SetDict(persistent.urw_name_filters, 'hide_store', True),
                         SetDict(persistent.urw_name_filters, 'hide_internal', True),
                     ]
-                    xsize 140
-                    ysize 40
-                    text_size 14
+                    xsize int(140 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(40 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background "#f44336"
                     hover_background "#ef5350"
@@ -930,23 +957,23 @@ screen URW_stats_screen():
     frame:
         xalign 0.5
         yalign 0.5
-        xmaximum 600
+        xmaximum int(600 * _urw_calc_responsive()['avg_scale'])
         background Frame("#1a1a2e", 20, 20)
-        xpadding 35
-        ypadding 30
+        xpadding int(35 * _urw_calc_responsive()['avg_scale'])
+        ypadding int(30 * _urw_calc_responsive()['avg_scale'])
         
         at URW_fade_in
         
         vbox:
-            spacing 20
+            spacing int(20 * _urw_calc_responsive()['avg_scale'])
             xalign 0.5
             
             text "{color=#4fc3f7}{size=28}{b}📊 URW 2.0 Statistics{/b}{/size}{/color}":
                 xalign 0.5
             
-            add "#4fc3f7" xsize 250 ysize 2 xalign 0.5
+            add "#4fc3f7" xsize int(250 * _urw_calc_responsive()['avg_scale']) ysize 2 xalign 0.5
             
-            null height 10
+            null height int(10 * _urw_calc_responsive()['avg_scale'])
             
             python:
                 _stats = urw_get_stats()
@@ -967,10 +994,10 @@ screen URW_stats_screen():
             frame:
                 background "#16213e"
                 xfill True
-                padding (20, 15)
+                padding (int(20 * _urw_calc_responsive()['avg_scale']), int(15 * _urw_calc_responsive()['avg_scale']))
                 
                 vbox:
-                    spacing 10
+                    spacing int(10 * _urw_calc_responsive()['avg_scale'])
                     
                     hbox:
                         text "{color=#888}{size=14}Version:{/size}{/color}"
@@ -984,10 +1011,10 @@ screen URW_stats_screen():
             frame:
                 background "#16213e"
                 xfill True
-                padding (20, 15)
+                padding (int(20 * _urw_calc_responsive()['avg_scale']), int(15 * _urw_calc_responsive()['avg_scale']))
                 
                 vbox:
-                    spacing 10
+                    spacing int(10 * _urw_calc_responsive()['avg_scale'])
                     
                     text "{color=#fff}{size=16}{b}Usage{/b}{/size}{/color}"
                     
@@ -1003,10 +1030,10 @@ screen URW_stats_screen():
             frame:
                 background "#16213e"
                 xfill True
-                padding (20, 15)
+                padding (int(20 * _urw_calc_responsive()['avg_scale']), int(15 * _urw_calc_responsive()['avg_scale']))
                 
                 vbox:
-                    spacing 10
+                    spacing int(10 * _urw_calc_responsive()['avg_scale'])
                     
                     text "{color=#fff}{size=16}{b}Cache Performance{/b}{/size}{/color}"
                     
@@ -1018,17 +1045,17 @@ screen URW_stats_screen():
                         text "{color=#888}{size=14}Consequence Cache:{/size}{/color}"
                         text "{color=#fff}{size=14} [_cons_cache_size]/[_cons_cache_max] ([_cons_cache_hit] hit rate){/size}{/color}"
             
-            null height 10
+            null height int(10 * _urw_calc_responsive()['avg_scale'])
             
             hbox:
-                spacing 20
+                spacing int(20 * _urw_calc_responsive()['avg_scale'])
                 xalign 0.5
                 
                 textbutton "Clear Caches":
                     action Function(urw_clear_caches)
-                    xsize 130
-                    ysize 40
-                    text_size 14
+                    xsize int(130 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(40 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background "#FF5722"
                     hover_background "#FF7043"
@@ -1036,9 +1063,9 @@ screen URW_stats_screen():
                 
                 textbutton "Close":
                     action Hide("URW_stats_screen", transition=dissolve)
-                    xsize 100
-                    ysize 40
-                    text_size 14
+                    xsize int(100 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(40 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background "#4fc3f7"
                     hover_background "#5fd3f7"
@@ -1061,29 +1088,29 @@ screen URW_debug():
     frame:
         xalign 0.5
         yalign 0.5
-        xmaximum 800
-        ymaximum 600
+        xmaximum int(800 * _urw_calc_responsive()['avg_scale'])
+        ymaximum int(600 * _urw_calc_responsive()['avg_scale'])
         background Frame("#0d1117", 20, 20)
-        xpadding 25
-        ypadding 20
+        xpadding int(25 * _urw_calc_responsive()['avg_scale'])
+        ypadding int(20 * _urw_calc_responsive()['avg_scale'])
         
         vbox:
-            spacing 15
+            spacing int(15 * _urw_calc_responsive()['avg_scale'])
             
             text "{color=#FF5722}{size=24}{b}🔍 URW 2.0 Debug Console{/b}{/size}{/color}":
                 xalign 0.5
             
-            add "#FF5722" xsize 300 ysize 2 xalign 0.5
+            add "#FF5722" xsize int(300 * _urw_calc_responsive()['avg_scale']) ysize 2 xalign 0.5
             
             # Log viewer
             viewport:
                 scrollbars "vertical"
                 mousewheel True
-                xsize 750
-                ysize 400
+                xsize int(750 * _urw_calc_responsive()['avg_scale'])
+                ysize int(400 * _urw_calc_responsive()['avg_scale'])
                 
                 vbox:
-                    spacing 5
+                    spacing int(5 * _urw_calc_responsive()['avg_scale'])
                     
                     python:
                         _logs = urw_log.get_logs(100)
@@ -1092,14 +1119,14 @@ screen URW_debug():
                         text "{color=#888}{size=11}[_log_entry]{/size}{/color}"
             
             hbox:
-                spacing 15
+                spacing int(15 * _urw_calc_responsive()['avg_scale'])
                 xalign 0.5
                 
                 textbutton "Clear Logs":
                     action Function(urw_log.clear)
-                    xsize 110
-                    ysize 35
-                    text_size 12
+                    xsize int(110 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(12 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background "#f44336"
                     hover_background "#ef5350"
@@ -1107,9 +1134,9 @@ screen URW_debug():
                 
                 textbutton "Copy Info":
                     action Function(urw_copy_debug_info)
-                    xsize 100
-                    ysize 35
-                    text_size 12
+                    xsize int(100 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(12 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background "#FF9800"
                     hover_background "#FFB74D"
@@ -1117,9 +1144,9 @@ screen URW_debug():
                 
                 textbutton "Toggle Debug":
                     action ToggleField(urw_log, '_enabled')
-                    xsize 120
-                    ysize 35
-                    text_size 12
+                    xsize int(120 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(12 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     if urw_log._enabled:
                         background "#4CAF50"
@@ -1131,9 +1158,9 @@ screen URW_debug():
                 
                 textbutton "Close":
                     action Hide("URW_debug", transition=dissolve)
-                    xsize 90
-                    ysize 35
-                    text_size 12
+                    xsize int(90 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(35 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(12 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background "#4fc3f7"
                     hover_background "#5fd3f7"
@@ -1157,23 +1184,23 @@ screen URW_full_viewer():
         background Frame("#0d1117", 20, 20)
         xalign 0.5
         yalign 0.5
-        xsize 900
-        ymaximum 700
-        padding (30, 25)
+        xsize int(900 * _urw_calc_responsive()['avg_scale'])
+        ymaximum int(700 * _urw_calc_responsive()['avg_scale'])
+        padding (int(30 * _urw_calc_responsive()['avg_scale']), int(25 * _urw_calc_responsive()['avg_scale']))
         
         vbox:
-            spacing 15
+            spacing int(15 * _urw_calc_responsive()['avg_scale'])
             
             # Title
             text "{color=#4fc3f7}{size=24}{b}📋 Full Consequence Viewer{/b}{/size}{/color}":
                 xalign 0.5
             
-            add "#4fc3f7" xsize 300 ysize 2 xalign 0.5
+            add "#4fc3f7" xsize int(300 * _urw_calc_responsive()['avg_scale']) ysize 2 xalign 0.5
             
             text "{color=#888}{size=14}View complete consequence details for current menu choices{/size}{/color}":
                 xalign 0.5
             
-            null height 10
+            null height int(10 * _urw_calc_responsive()['avg_scale'])
             
             # Get current menu data
             python:
@@ -1185,11 +1212,11 @@ screen URW_full_viewer():
                     scrollbars "vertical"
                     mousewheel True
                     draggable True
-                    ysize 450
+                    ysize int(450 * _urw_calc_responsive()['avg_scale'])
                     xfill True
                     
                     vbox:
-                        spacing 20
+                        spacing int(20 * _urw_calc_responsive()['avg_scale'])
                         
                         for _choice_idx, _choice_data in enumerate(_viewer_data):
                             python:
@@ -1199,10 +1226,10 @@ screen URW_full_viewer():
                             frame:
                                 background "#16213e"
                                 xfill True
-                                padding (20, 15)
+                                padding (int(20 * _urw_calc_responsive()['avg_scale']), int(15 * _urw_calc_responsive()['avg_scale']))
                                 
                                 vbox:
-                                    spacing 10
+                                    spacing int(10 * _urw_calc_responsive()['avg_scale'])
                                     
                                     # Choice caption
                                     text "{color=#4fc3f7}{size=16}{b}Choice [_choice_num]: [_choice_caption]{/b}{/size}{/color}"
@@ -1319,10 +1346,10 @@ screen URW_full_viewer():
                 frame:
                     background "#16213e"
                     xfill True
-                    padding (30, 40)
+                    padding (int(30 * _urw_calc_responsive()['avg_scale']), int(40 * _urw_calc_responsive()['avg_scale']))
                     
                     vbox:
-                        spacing 15
+                        spacing int(15 * _urw_calc_responsive()['avg_scale'])
                         xalign 0.5
                         
                         text "{color=#888}{size=18}No menu currently active{/size}{/color}":
@@ -1332,18 +1359,18 @@ screen URW_full_viewer():
                             xalign 0.5
                             text_align 0.5
             
-            null height 10
+            null height int(10 * _urw_calc_responsive()['avg_scale'])
             
             # Footer buttons
             hbox:
-                spacing 20
+                spacing int(20 * _urw_calc_responsive()['avg_scale'])
                 xalign 0.5
                 
                 textbutton "Refresh":
                     action NullAction()
-                    xsize 120
-                    ysize 40
-                    text_size 14
+                    xsize int(120 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(40 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background "#2196F3"
                     hover_background "#42A5F5"
@@ -1351,9 +1378,9 @@ screen URW_full_viewer():
                 
                 textbutton "Close":
                     action Hide("URW_full_viewer", transition=dissolve)
-                    xsize 120
-                    ysize 40
-                    text_size 14
+                    xsize int(120 * _urw_calc_responsive()['avg_scale'])
+                    ysize int(40 * _urw_calc_responsive()['avg_scale'])
+                    text_size int(14 * _urw_calc_responsive()['avg_scale'])
                     text_xalign 0.5
                     background "#4fc3f7"
                     hover_background "#5fd3f7"
