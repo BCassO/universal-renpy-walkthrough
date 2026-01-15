@@ -170,7 +170,7 @@ screen URW_preferences():
                                     xalign 0.5
                                     
                                     textbutton "−":
-                                        action If(persistent.urw_text_size > 12, 
+                                        action If(persistent.urw_text_size is not None and persistent.urw_text_size > 12, 
                                                 SetVariable("persistent.urw_text_size", persistent.urw_text_size - 2))
                                         style "URW_size_button"
                                         text_size int(24 * _urw_calc_responsive()['avg_scale'])
@@ -187,7 +187,7 @@ screen URW_preferences():
                                         thumb None
                                     
                                     textbutton "+":
-                                        action If(persistent.urw_text_size < 40, 
+                                        action If(persistent.urw_text_size is not None and persistent.urw_text_size < 40, 
                                                 SetVariable("persistent.urw_text_size", persistent.urw_text_size + 2))
                                         style "URW_size_button"
                                         text_size int(24 * _urw_calc_responsive()['avg_scale'])

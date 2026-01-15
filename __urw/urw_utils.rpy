@@ -86,8 +86,31 @@ init -996 python:
                     persistent.urw_name_filters['custom_hide'] = prefixes
                     
                 urw_log.info("Migrated: name filter settings", "COMPAT")
+        
+        @staticmethod
+        def ensure_defaults():
+            """Ensure all critical persistent values have valid defaults (handles None cases)"""
+            if persistent.urw_text_size is None:
+                persistent.urw_text_size = 25
+            if persistent.urw_max_consequences is None:
+                persistent.urw_max_consequences = 3
+            if persistent.urw_enabled is None:
+                persistent.urw_enabled = True
+            if persistent.urw_show_all is None:
+                persistent.urw_show_all = True
+            if persistent.urw_spoiler_mode is None:
+                persistent.urw_spoiler_mode = False
+            if persistent.urw_highlight_best is None:
+                persistent.urw_highlight_best = True
+            if persistent.urw_theme is None:
+                persistent.urw_theme = "modern"
+            if persistent.urw_full_text is None:
+                persistent.urw_full_text = False
+            if persistent.urw_hide_dialogue is None:
+                persistent.urw_hide_dialogue = True
     
     URWCompatibility.migrate_settings()
+    URWCompatibility.ensure_defaults()
     
     ##################################################################
     #                URW VARIABLE TRACKER                            #
